@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react"
 
+// TODO: Production'da environment variable kullan (import.meta.env.VITE_API_URL)
 const API = "http://127.0.0.1:8000"
+// TODO: Production'da wss:// ve doğru host kullan (import.meta.env.VITE_WS_URL)
+const WS_URL = "ws://127.0.0.1:8000"
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState([])
@@ -25,7 +28,7 @@ export function useNotifications() {
     // WebSocket bağlantısı
     const connect = () => {
       try {
-        const ws = new WebSocket("ws://127.0.0.1:8000/ws/notifications")
+        const ws = new WebSocket(`${WS_URL}/ws/notifications`)
         wsRef.current = ws
 
         ws.onmessage = (e) => {

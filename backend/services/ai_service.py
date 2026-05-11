@@ -93,16 +93,16 @@ def get_ai_response(user_message: str, conversation_history: list = None) -> dic
         max_output_tokens=1024,
     )
 
-    # ── Yardımcı: güvenli function_call kontrolü ─────────────────────────────────
+    # ── ReAct Döngüsü ──────────────────────────────────────────────────────────
+    max_iterations = 5  # sonsuz döngü koruması
+    iteration = 0
+
     def _has_function_call(part):
+        """Güvenli function_call kontrolü — attribute eksikliğine karşı koruma."""
         try:
             return bool(part.function_call and part.function_call.name)
         except Exception:
             return False
-
-    # ── ReAct Döngüsü ──────────────────────────────────────────────────────────
-    max_iterations = 5  # sonsuz döngü koruması
-    iteration = 0
 
     while iteration < max_iterations:
         iteration += 1
@@ -116,7 +116,7 @@ def get_ai_response(user_message: str, conversation_history: list = None) -> dic
         candidate = response.candidates[0]
         parts      = candidate.content.parts
 
-        # parts None olabilir — güvenlik kontrolü
+        # parts None olabilir — güvenli kontrol
         if parts is None:
             break
 

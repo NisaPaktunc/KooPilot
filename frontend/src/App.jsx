@@ -4,7 +4,10 @@ import AdminDashboard from "./pages/AdminDashboard"
 const API = "http://127.0.0.1:8000"
 
 // Hangi sayfayı göster
-const page = new URLSearchParams(window.location.search).get("page") === "admin" ? "admin" : "chat"
+const page =
+  new URLSearchParams(window.location.search).get("page") === "admin"
+    ? "admin"
+    : "chat"
 
 // ── Tool badge etiketleri ─────────────────────────────────────────────────────
 const TOOL_LABELS = {
