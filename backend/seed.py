@@ -6,7 +6,7 @@ Demo için gerçekçi veri yükler.
 """
 
 from database import engine, SessionLocal
-from models import Base, Product, Order, OrderItem, Supplier, Notification
+from models import Base, Product, Order, Supplier, Notification
 
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()

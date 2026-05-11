@@ -4,7 +4,7 @@ import AdminDashboard from "./pages/AdminDashboard"
 const API = "http://127.0.0.1:8000"
 
 // Hangi sayfayı göster
-const page = window.location.pathname === "/admin" ? "admin" : "chat"
+const page = new URLSearchParams(window.location.search).get("page") === "admin" ? "admin" : "chat"
 
 // ── Tool badge etiketleri ─────────────────────────────────────────────────────
 const TOOL_LABELS = {
@@ -83,7 +83,7 @@ function CustomerChat() {
             <span style={S.statusDot} />
             Gemini AI Aktif
           </div>
-          <a href="/admin" style={{
+          <a href="/?page=admin" style={{
             background: "#21262d", border: "1px solid #30363d",
             borderRadius: 8, padding: "6px 14px", color: "#c9d1d9",
             textDecoration: "none", fontSize: 12,

@@ -347,19 +347,6 @@ def get_notifications(limit: int = 30):
         db.close()
 
 
-@app.patch("/notifications/{notif_id}/read")
-def mark_notification_read(notif_id: int):
-    db = SessionLocal()
-    try:
-        notif = db.query(Notification).filter(Notification.id == notif_id).first()
-        if notif:
-            notif.is_read = True
-            db.commit()
-        return {"success": True}
-    finally:
-        db.close()
-
-
 @app.patch("/notifications/read-all")
 def mark_all_read():
     db = SessionLocal()
@@ -368,6 +355,19 @@ def mark_all_read():
             {"is_read": True}
         )
         db.commit()
+        return {"success": True}
+    finally:
+        db.close()
+
+
+@app.patch("/notifications/{notif_id}/read")
+def mark_notification_read(notif_id: int):
+    db = SessionLocal()
+    try:
+        notif = db.query(Notification).filter(Notification.id == notif_id).first()
+        if notif:
+            notif.is_read = True
+            db.commit()
         return {"success": True}
     finally:
         db.close()
