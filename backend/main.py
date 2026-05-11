@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from database import engine, SessionLocal
-from models import Base, Product, Order, Notification, Message
+from models import Base, Product, Order, OrderItem, Notification, Message
 from services.ai_service import get_ai_response
 import uuid
 import json
@@ -397,6 +397,75 @@ def dashboard_summary():
             "delivered":      delivered,
             "critical_stock": critical_stock,
             "unread_notifs":  unread_notifs,
+        }
+    finally:
+        db.close()
+
+
+# ── Dashboard Analitik ────────────────────────────────────────────────────────
+
+@app.get("/dashboard/analytics")
+def dashboard_analytics():
+    db = SessionLocal()
+    try:
+        orders = db.query(Order).all()
+        items  = db.query(OrderItem).all()
+
+        total_revenue = sum(o.total_amount or 0 for o in orders)
+
+        # Sipariş durum dağılımı
+        status_counts = {}
+        for o in orders:
+            status_counts[o.status] = status_counts.get(o.status, 0) + 1
+
+        # Ürün bazlı satış
+        product_sales = {}
+        product_revenue = {}
+        for item in items:
+            pid = item.product_id
+            product_sales[pid] = product_sales.get(pid, 0) + item.quantity
+            product_revenue[pid] = product_revenue.get(pid, 0) + (item.quantity * item.unit_price)
+
+        # Ürün adlarını çek
+        product_names = {}
+        for pid in set(list(product_sales.keys())):
+            prod = db.query(Product).filter(Product.id == pid).first()
+            if prod:
+                product_names[pid] = prod.name
+
+        # Top 5 ürün (miktar)
+        top_products = [
+            {"name": product_names.get(pid, pid), "quantity": qty}
+            for pid, qty in sorted(product_sales.items(), key=lambda x: x[1], reverse=True)[:5]
+        ]
+
+        # Top 5 ürün (gelir)
+        top_revenue = [
+            {"name": product_names.get(pid, pid), "revenue": rev}
+            for pid, rev in sorted(product_revenue.items(), key=lambda x: x[1], reverse=True)[:5]
+        ]
+
+        # Kategori bazlı gelir
+        category_rev = {}
+        for item in items:
+            prod = db.query(Product).filter(Product.id == item.product_id).first()
+            if prod:
+                cat = prod.category or "genel"
+                category_rev[cat] = category_rev.get(cat, 0) + (item.quantity * item.unit_price)
+
+        category_data = [
+            {"category": cat, "revenue": rev}
+            for cat, rev in sorted(category_rev.items(), key=lambda x: x[1], reverse=True)
+        ]
+
+        return {
+            "total_revenue":  total_revenue,
+            "total_orders":   len(orders),
+            "avg_order":      total_revenue / len(orders) if orders else 0,
+            "status_counts":  status_counts,
+            "top_products":   top_products,
+            "top_revenue":    top_revenue,
+            "category_data":  category_data,
         }
     finally:
         db.close()

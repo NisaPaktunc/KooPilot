@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react"
+import Markdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import AdminDashboard from "./pages/AdminDashboard"
 
 const API = "http://127.0.0.1:8000"
@@ -16,20 +18,109 @@ const TOOL_LABELS = {
   get_cargo_status:          "🚚 Kargo takip edildi",
   send_manager_notification: "🔔 Yönetici bilgilendirildi",
   get_daily_summary:         "📈 Günlük özet alındı",
+  list_all_products:         "🏪 Ürünler listelendi",
+  get_sales_analytics:       "📊 Satış analizi yapıldı",
+  get_stock_forecast:        "🔮 Stok tahmini yapıldı",
+}
+
+// ── Session yönetimi ──────────────────────────────────────────────────────────
+const STORAGE_KEY_SESSION = "koopilot_session_id"
+const STORAGE_KEY_MESSAGES = "koopilot_messages"
+
+function loadSession() {
+  try {
+    const sid = localStorage.getItem(STORAGE_KEY_SESSION)
+    const msgs = localStorage.getItem(STORAGE_KEY_MESSAGES)
+    return {
+      sessionId: sid || "session-" + Date.now(),
+      messages: msgs ? JSON.parse(msgs) : [],
+    }
+  } catch {
+    return { sessionId: "session-" + Date.now(), messages: [] }
+  }
+}
+
+function saveSession(sessionId, messages) {
+  try {
+    localStorage.setItem(STORAGE_KEY_SESSION, sessionId)
+    localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages))
+  } catch {}
+}
+
+// ── Markdown bileşeni ─────────────────────────────────────────────────────────
+function ChatMarkdown({ content }) {
+  return (
+    <Markdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p:  ({ children }) => <p style={{ margin: "4px 0" }}>{children}</p>,
+        ul: ({ children }) => <ul style={{ margin: "4px 0", paddingLeft: 20 }}>{children}</ul>,
+        ol: ({ children }) => <ol style={{ margin: "4px 0", paddingLeft: 20 }}>{children}</ol>,
+        li: ({ children }) => <li style={{ marginBottom: 2 }}>{children}</li>,
+        strong: ({ children }) => <strong style={{ color: "#e1e4e8" }}>{children}</strong>,
+        code: ({ children, inline }) =>
+          inline !== false ? (
+            <code style={{
+              background: "rgba(124,106,247,0.15)", color: "#a08af5",
+              padding: "1px 5px", borderRadius: 4, fontSize: "0.85em",
+            }}>{children}</code>
+          ) : (
+            <pre style={{
+              background: "#0d1117", border: "1px solid #30363d",
+              borderRadius: 6, padding: 10, overflowX: "auto",
+              fontSize: "0.85em", margin: "6px 0",
+            }}><code>{children}</code></pre>
+          ),
+        table: ({ children }) => (
+          <table style={{
+            borderCollapse: "collapse", width: "100%", margin: "8px 0",
+            fontSize: "0.85em",
+          }}>{children}</table>
+        ),
+        th: ({ children }) => (
+          <th style={{
+            border: "1px solid #30363d", padding: "4px 8px",
+            background: "#161b22", textAlign: "left", fontSize: "0.85em",
+          }}>{children}</th>
+        ),
+        td: ({ children }) => (
+          <td style={{
+            border: "1px solid #30363d", padding: "4px 8px",
+          }}>{children}</td>
+        ),
+      }}
+    >
+      {content}
+    </Markdown>
+  )
 }
 
 // ── Müşteri Chat ──────────────────────────────────────────────────────────────
 function CustomerChat() {
-  const [messages, setMessages]   = useState([])
+  const stored = useRef(loadSession())
+  const [messages, setMessages]   = useState(stored.current.messages)
   const [input, setInput]         = useState("")
   const [loading, setLoading]     = useState(false)
   const [toolCalls, setToolCalls] = useState([])
-  const sessionId                 = useRef("session-" + Date.now())
+  const sessionId                 = useRef(stored.current.sessionId)
   const bottomRef                 = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, loading, toolCalls])
+
+  // Mesajlar değiştiğinde localStorage'a kaydet
+  useEffect(() => {
+    saveSession(sessionId.current, messages)
+  }, [messages])
+
+  const startNewChat = () => {
+    const newSid = "session-" + Date.now()
+    sessionId.current = newSid
+    setMessages([])
+    setInput("")
+    saveSession(newSid, [])
+  }
 
   const sendMessage = async () => {
     const text = input.trim()
@@ -67,7 +158,9 @@ function CustomerChat() {
     "Organik Bal var mı?",
     "Domates stoğu nedir?",
     "Bugünkü sipariş durumu",
-    "ORD-132 kargo durumu",
+    "Satış analizi göster",
+    "Hangi ürünler tükenecek?",
+    "Sebze kategorisindeki ürünler",
   ]
 
   return (
@@ -86,6 +179,13 @@ function CustomerChat() {
             <span style={S.statusDot} />
             Gemini AI Aktif
           </div>
+          <button onClick={startNewChat} style={{
+            background: "#21262d", border: "1px solid #30363d",
+            borderRadius: 8, padding: "6px 14px", color: "#c9d1d9",
+            cursor: "pointer", fontSize: 12,
+          }}>
+            ✨ Yeni Sohbet
+          </button>
           <a href="/?page=admin" style={{
             background: "#21262d", border: "1px solid #30363d",
             borderRadius: 8, padding: "6px 14px", color: "#c9d1d9",
@@ -105,9 +205,9 @@ function CustomerChat() {
               Merhaba! Ben Koopilot.
             </p>
             <p style={{ fontSize: "0.9rem", color: "#8b949e", marginBottom: 16 }}>
-              Sipariş, stok ve kargo sorularınızı yanıtlıyorum.
+              Sipariş, stok, kargo ve satış analizi sorularınızı yanıtlıyorum.
             </p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", maxWidth: 600 }}>
               {SUGGESTIONS.map(s => (
                 <button key={s} onClick={() => setInput(s)} style={S.chip}>{s}</button>
               ))}
@@ -128,8 +228,12 @@ function CustomerChat() {
               <div style={S.senderLabel}>
                 {msg.sender === "user" ? "Sen" : "Koopilot"}
               </div>
-              <div style={{ fontSize: "0.95rem", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                {msg.text}
+              <div style={{ fontSize: "0.95rem", wordBreak: "break-word" }}>
+                {msg.sender === "bot" ? (
+                  <ChatMarkdown content={msg.text} />
+                ) : (
+                  <span style={{ whiteSpace: "pre-wrap" }}>{msg.text}</span>
+                )}
               </div>
               {/* Kullanılan tool'lar */}
               {msg.toolsUsed?.length > 0 && (
