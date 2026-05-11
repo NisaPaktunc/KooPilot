@@ -4,7 +4,37 @@
     "konum": "İstanbul Anadolu Dağıtım Merkezi",
     "tahmini_teslim": "Bugün 14:00-18:00",
     "gecikme": false,
-    "son_guncelleme": "Bugün 09:15"
+    "son_guncelleme": "Bugün 09:15",
+    "kargo_firmasi": "Yurtiçi Kargo",
+    "siparis_id": "ORD-128",
+    "musteri": "Ahmet Yılmaz",
+    "gecmis": [
+      {
+        "tarih": "3 gün önce 10:22",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "2 gün önce 14:05",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Kadıköy Yurtiçi Şubesi"
+      },
+      {
+        "tarih": "Dün 08:40",
+        "durum": "Transfer merkezinde",
+        "konum": "Gebze Transfer Merkezi"
+      },
+      {
+        "tarih": "Bugün 06:15",
+        "durum": "Dağıtım şubesinde",
+        "konum": "İstanbul Anadolu Dağıtım Merkezi"
+      },
+      {
+        "tarih": "Bugün 09:15",
+        "durum": "Dağıtıma çıktı 🚚",
+        "konum": "Kurye aracında"
+      }
+    ]
   },
   "TRK-4895": {
     "durum": "Gecikme ⚠️",
@@ -12,7 +42,43 @@
     "tahmini_teslim": "2 gün sonra",
     "gecikme": true,
     "gecikme_nedeni": "Hava koşulları nedeniyle gecikmeli",
-    "son_guncelleme": "Bugün 07:30"
+    "son_guncelleme": "Bugün 07:30",
+    "kargo_firmasi": "Aras Kargo",
+    "siparis_id": "ORD-132",
+    "musteri": "Ali Öztürk",
+    "gecmis": [
+      {
+        "tarih": "5 gün önce 11:00",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "4 gün önce 15:30",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Üsküdar Aras Şubesi"
+      },
+      {
+        "tarih": "3 gün önce 03:00",
+        "durum": "Transfer merkezinde",
+        "konum": "İstanbul Aras Transfer"
+      },
+      {
+        "tarih": "2 gün önce 09:45",
+        "durum": "Yolda",
+        "konum": "TEM Otoyolu"
+      },
+      {
+        "tarih": "Dün 22:10",
+        "durum": "Gecikme bildirimi ⚠️",
+        "konum": "Ankara Transfer Merkezi",
+        "not": "Yoğun hava trafiği"
+      },
+      {
+        "tarih": "Bugün 07:30",
+        "durum": "Transfer merkezinde bekleniyor",
+        "konum": "Ankara Transfer Merkezi"
+      }
+    ]
   },
   "TRK-4880": {
     "durum": "Teslim Edildi ✅",
@@ -20,6 +86,262 @@
     "tahmini_teslim": "Teslim edildi",
     "gecikme": false,
     "teslim_saati": "Dün 15:43",
-    "son_guncelleme": "Dün 15:43"
+    "son_guncelleme": "Dün 15:43",
+    "kargo_firmasi": "Yurtiçi Kargo",
+    "siparis_id": "ORD-131",
+    "musteri": "Ayşe Çelik",
+    "gecmis": [
+      {
+        "tarih": "4 gün önce 09:00",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "3 gün önce 13:20",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Beşiktaş Yurtiçi Şubesi"
+      },
+      {
+        "tarih": "Dün 07:00",
+        "durum": "Dağıtıma çıktı",
+        "konum": "Kartal Dağıtım Merkezi"
+      },
+      {
+        "tarih": "Dün 15:43",
+        "durum": "Teslim edildi ✅",
+        "konum": "Alıcı kapısında",
+        "imza": "Müşteri teslim aldı"
+      }
+    ]
+  },
+  "TRK-4901": {
+    "durum": "Dağıtımda 🚚",
+    "konum": "Ankara Çankaya Dağıtım Merkezi",
+    "tahmini_teslim": "Bugün 11:00-15:00",
+    "gecikme": false,
+    "son_guncelleme": "Bugün 08:50",
+    "kargo_firmasi": "MNG Kargo",
+    "siparis_id": "ORD-135",
+    "musteri": "Elif Şahin",
+    "gecmis": [
+      {
+        "tarih": "2 gün önce 14:00",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "Dün 09:10",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Bağcılar MNG Şubesi"
+      },
+      {
+        "tarih": "Dün 22:00",
+        "durum": "Transfer merkezinde",
+        "konum": "Ankara MNG Transfer"
+      },
+      {
+        "tarih": "Bugün 08:50",
+        "durum": "Dağıtıma çıktı 🚚",
+        "konum": "Çankaya Dağıtım Merkezi"
+      }
+    ]
+  },
+  "TRK-4876": {
+    "durum": "Teslim Edildi ✅",
+    "konum": "Alıcı teslim aldı",
+    "tahmini_teslim": "Teslim edildi",
+    "gecikme": false,
+    "teslim_saati": "2 gün önce 13:15",
+    "son_guncelleme": "2 gün önce 13:15",
+    "kargo_firmasi": "Aras Kargo",
+    "siparis_id": "ORD-136",
+    "musteri": "Mustafa Erdoğan",
+    "gecmis": [
+      {
+        "tarih": "7 gün önce 10:30",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "6 gün önce 16:00",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Pendik Aras Şubesi"
+      },
+      {
+        "tarih": "5 gün önce 04:00",
+        "durum": "Transfer merkezinde",
+        "konum": "İzmir Aras Transfer"
+      },
+      {
+        "tarih": "4 gün önce 11:00",
+        "durum": "Dağıtıma çıktı",
+        "konum": "İzmir Konak Dağıtım"
+      },
+      {
+        "tarih": "2 gün önce 13:15",
+        "durum": "Teslim edildi ✅",
+        "konum": "Alıcı kapısında"
+      }
+    ]
+  },
+  "TRK-4908": {
+    "durum": "Transfer Merkezinde 📦",
+    "konum": "Bursa PTT Transfer Merkezi",
+    "tahmini_teslim": "Yarın 10:00-16:00",
+    "gecikme": false,
+    "son_guncelleme": "Bugün 04:20",
+    "kargo_firmasi": "PTT Kargo",
+    "siparis_id": "ORD-140",
+    "musteri": "Kemal Bulut",
+    "gecmis": [
+      {
+        "tarih": "2 gün önce 11:30",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "Dün 09:00",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Zeytinburnu PTT Şubesi"
+      },
+      {
+        "tarih": "Bugün 04:20",
+        "durum": "Transfer merkezine ulaştı",
+        "konum": "Bursa PTT Transfer Merkezi"
+      }
+    ]
+  },
+  "TRK-4890": {
+    "durum": "Teslim Edildi ✅",
+    "konum": "Alıcı teslim aldı",
+    "tahmini_teslim": "Teslim edildi",
+    "gecikme": false,
+    "teslim_saati": "Dün 11:28",
+    "son_guncelleme": "Dün 11:28",
+    "kargo_firmasi": "Yurtiçi Kargo",
+    "siparis_id": "ORD-141",
+    "musteri": "Nur Çetin",
+    "gecmis": [
+      {
+        "tarih": "3 gün önce 10:00",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "2 gün önce 14:45",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Maltepe Yurtiçi Şubesi"
+      },
+      {
+        "tarih": "Dün 06:30",
+        "durum": "Dağıtıma çıktı",
+        "konum": "Maltepe Dağıtım Merkezi"
+      },
+      {
+        "tarih": "Dün 11:28",
+        "durum": "Teslim edildi ✅",
+        "konum": "Alıcı kapısında"
+      }
+    ]
+  },
+  "TRK-4915": {
+    "durum": "Gecikme ⚠️",
+    "konum": "Aras Kargo Konya Aktarma Merkezi",
+    "tahmini_teslim": "3 gün sonra",
+    "gecikme": true,
+    "gecikme_nedeni": "Aktarma merkezi kapasite aşımı",
+    "son_guncelleme": "Bugün 06:00",
+    "kargo_firmasi": "Aras Kargo",
+    "siparis_id": "ORD-143",
+    "musteri": "Gülşen Özer",
+    "not": "Müşteri hafta sonu teslim istemişti. Bu gecikmeyle hafta içine sarkabilir.",
+    "gecmis": [
+      {
+        "tarih": "3 gün önce 13:00",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "2 gün önce 10:30",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Ataşehir Aras Şubesi"
+      },
+      {
+        "tarih": "Dün 01:00",
+        "durum": "Transfer merkezinde",
+        "konum": "İstanbul Aras Transfer"
+      },
+      {
+        "tarih": "Dün 14:00",
+        "durum": "Yolda",
+        "konum": "Anadolu Otoyolu"
+      },
+      {
+        "tarih": "Bugün 06:00",
+        "durum": "Gecikme bildirimi ⚠️",
+        "konum": "Konya Aktarma Merkezi",
+        "not": "Kapasite aşımı"
+      }
+    ]
+  },
+  "TRK-4870": {
+    "durum": "Teslim Edildi ✅",
+    "konum": "Alıcı teslim aldı",
+    "tahmini_teslim": "Teslim edildi",
+    "gecikme": false,
+    "teslim_saati": "3 gün önce 10:05",
+    "son_guncelleme": "3 gün önce 10:05",
+    "kargo_firmasi": "MNG Kargo",
+    "siparis_id": "ORD-145",
+    "musteri": "Merve Yılmaz",
+    "gecmis": [
+      {
+        "tarih": "6 gün önce 09:00",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "5 gün önce 15:00",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Kadıköy MNG Şubesi"
+      },
+      {
+        "tarih": "4 gün önce 22:30",
+        "durum": "Transfer merkezinde",
+        "konum": "Eskişehir MNG Transfer"
+      },
+      {
+        "tarih": "3 gün önce 07:00",
+        "durum": "Dağıtıma çıktı",
+        "konum": "Eskişehir Odunpazarı Dağıtım"
+      },
+      {
+        "tarih": "3 gün önce 10:05",
+        "durum": "Teslim edildi ✅",
+        "konum": "Alıcı kapısında"
+      }
+    ]
+  },
+  "TRK-4920": {
+    "durum": "Şubede Hazırlanıyor 📦",
+    "konum": "Fatih Yurtiçi Şubesi",
+    "tahmini_teslim": "Yarın 09:00-14:00",
+    "gecikme": false,
+    "son_guncelleme": "Bugün 10:00",
+    "kargo_firmasi": "Yurtiçi Kargo",
+    "siparis_id": "ORD-147",
+    "musteri": "Pınar Güneş",
+    "gecmis": [
+      {
+        "tarih": "Bugün 08:30",
+        "durum": "Gönderi oluşturuldu",
+        "konum": "Satıcı deposu"
+      },
+      {
+        "tarih": "Bugün 10:00",
+        "durum": "Şubeye teslim edildi",
+        "konum": "Fatih Yurtiçi Şubesi"
+      }
+    ]
   }
 }
