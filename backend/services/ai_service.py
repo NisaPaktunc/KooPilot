@@ -1,135 +1,163 @@
 """
-Koopilot AI Service Layer — Gemini Edition
-──────────────────────────────────────────
-Mimari: Rule-Based Tool Router + Gemini Response Writer
+Koopilot AI Service — Gemini Function Calling Edition
+───────────────────────────────────────────────────────
+Mimari: Gerçek Gemini Function Calling (ReAct döngüsü)
+
+Eski (kural tabanlı):  if "domates" in message → check_stock()
+Yeni (agent):          Gemini hangi tool'u çağıracağına kendi karar verir
 
 Akış:
-  1. Kullanıcı mesajı gelir
-  2. Kural tabanlı router → mesajda stok/ürün keyword'ü var mı?
-  3. Varsa → check_stock tool çağrılır → DB'den gerçek veri çekilir
-  4. Gemini, veriyi + mesajı alarak doğal dil yanıtı üretir
-  5. Yanıt + kullanılan araçlar frontend'e döner
-
-SDK: google-genai (yeni nesil, google.generativeai deprecated)
+  1. Kullanıcı mesajı + konuşma geçmişi Gemini'ye gönderilir
+  2. Gemini bir tool çağırmak istiyorsa function_call bloğu döner
+  3. Backend tool'u çalıştırır, sonucu Gemini'ye geri verir
+  4. Gemini yeterli bilgiye sahip olana kadar döngü devam eder
+  5. Son doğal dil yanıtı kullanıcıya döner
 """
 
 import os
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
-from services.tools import execute_tool
+from services.tools import execute_tool, TOOL_DEFINITIONS
 
 load_dotenv()
 
-# ── Gemini Client ────────────────────────────────────────────────────────────
+# ── Gemini Client ──────────────────────────────────────────────────────────────
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-MODEL = "gemini-2.5-flash"
+MODEL  = "gemini-2.5-flash"
 
-SYSTEM_PROMPT = (
-    "Sen Koopilot adlı bir kooperatif operasyon asistanısın. "
-    "Görevin kooperatif çalışanlarına stok bilgisi ve operasyonel "
-    "sorularında yardımcı olmak.\n"
-    "Kuralların:\n"
-    "- Her zaman Türkçe yanıt ver\n"
-    "- Kısa ve net cevaplar ver\n"
-    "- Samimi ve profesyonel bir dil kullan\n"
-    "- Sana verilen stok verisini doğrudan kullan, asla uydurma\n"
-)
+SYSTEM_INSTRUCTION = """Sen Koopilot'sun — küçük işletmeler ve kooperatifler için 
+yapay zeka destekli operasyon asistanı.
 
+GÖREVLER:
+- Müşterilerin sipariş, kargo ve ürün sorularını yanıtla
+- Stok durumlarını kontrol et, kritik durumlarda yöneticiyi bilgilendir
+- Yöneticilere günlük özet ve operasyonel bilgi sun
+- Proaktif ol: sorun fark edersen söyle
 
-# ── Rule-Based Tool Router ───────────────────────────────────────────────────
+KURALLAR:
+- Her zaman önce ilgili tool'u çağır, bilgiyi gerçek veriden al, asla uydurma
+- Birden fazla bilgi gerekiyorsa birden fazla tool çağır
+- Stok kritikse MUTLAKA send_manager_notification tool'unu da çağır
+- Kargo gecikmesi varsa hem müşteriyi bilgilendir hem yöneticiye gönder
+- Türkçe konuş, samimi ama profesyonel ol
+- Kısa ve net cümleler kur, emoji kullan ama abartma
 
-# Stok sorgusu tetikleyen anahtar kelimeler
-STOCK_KEYWORDS = [
-    "stok", "var mı", "varmı", "var mi", "kaç", "kac",
-    "mevcut", "miktar", "adet", "kaldı", "kaldi",
-    "tükendi", "tukendi", "bitti", "depoda",
-]
-
-# Veritabanındaki bilinen ürünler (genişletilebilir)
-KNOWN_PRODUCTS = [
-    "domates", "biber", "patates", "soğan", "sogan", "salatalık", "salatalik",
-]
+YANIT STILI:
+- Somut bilgi ver: tarih, saat, miktar, sipariş numarası
+- Belirsizlik varsa sormaktan çekinme
+- Müşteriyi asla boş bırakma
+"""
 
 
-def detect_stock_query(message: str):
+# ── Ana Agent Fonksiyonu ───────────────────────────────────────────────────────
+
+def get_ai_response(user_message: str, conversation_history: list = None) -> dict:
     """
-    Mesajda stok sorgusu varsa hedef ürün adını döndürür.
-      None         → stok sorusu yok
-      "__unknown__"→ stok sorusu var, ürün tanımlanamadı
-      str          → tespit edilen ürün adı
-    """
-    msg_lower = message.lower()
+    Gerçek Gemini function calling ile ReAct döngüsü.
 
-    has_stock_kw = any(kw in msg_lower for kw in STOCK_KEYWORDS)
-    if not has_stock_kw:
-        return None
-
-    for product in KNOWN_PRODUCTS:
-        if product in msg_lower:
-            return product
-
-    return "__unknown__"
-
-
-# ── Agent Entry Point ────────────────────────────────────────────────────────
-
-def get_ai_response(user_message: str) -> dict:
-    """
-    Kullanıcı mesajını işler; rule-based routing + Gemini yanıtı döndürür.
+    Args:
+        user_message: Kullanıcının son mesajı
+        conversation_history: Önceki mesajlar listesi (Gemini formatında)
 
     Returns:
-        dict: {
-            "response": str,
-            "tools_used": list[str]
+        {
+            "response": str,           — kullanıcıya gösterilecek yanıt
+            "tools_used": list[str],   — çağrılan tool adları (UI badge için)
+            "tool_details": list[dict] — tool input/output detayları
         }
     """
-    tools_used = []
-    tool_context = ""
+    if conversation_history is None:
+        conversation_history = []
 
-    # ── Tool Routing ─────────────────────────────────────────────────────────
-    detected = detect_stock_query(user_message)
+    tools_used    = []
+    tool_details  = []
 
-    if detected == "__unknown__":
-        tool_context = (
-            "\n[Sistem Notu]: Kullanıcı stok sorgusu yapıyor ancak "
-            "hangi ürünü sorduğu anlaşılamadı. "
-            "Kullanıcıdan ürün adını açıkça belirtmesini iste.\n"
-        )
-    elif detected is not None:
-        stock_result = execute_tool("check_stock", {"product_name": detected})
-        tools_used.append("check_stock")
-        tool_context = f"\n[Stok Verisi]: {stock_result}\n"
+    # Gemini tools nesnesi
+    gemini_tools = [
+        types.Tool(function_declarations=[
+            types.FunctionDeclaration(**t) for t in TOOL_DEFINITIONS
+        ])
+    ]
 
-    # ── Gemini Prompt ─────────────────────────────────────────────────────────
-    if tool_context:
-        prompt = (
-            f"{SYSTEM_PROMPT}"
-            f"{tool_context}\n"
-            f"Kullanıcı sorusu: {user_message}\n\n"
-            "Yukarıdaki veriyi kullanarak kısa ve net bir Türkçe yanıt ver."
-        )
-    else:
-        prompt = f"{SYSTEM_PROMPT}\nKullanıcı sorusu: {user_message}"
+    # Mevcut konuşma + yeni mesaj
+    contents = list(conversation_history) + [
+        types.Content(role="user", parts=[types.Part(text=user_message)])
+    ]
 
-    # ── Gemini API Çağrısı ────────────────────────────────────────────────────
-    try:
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_INSTRUCTION,
+        tools=gemini_tools,
+        temperature=0.3,
+        max_output_tokens=1024,
+    )
+
+    # ── ReAct Döngüsü ──────────────────────────────────────────────────────────
+    max_iterations = 5  # sonsuz döngü koruması
+    iteration = 0
+
+    while iteration < max_iterations:
+        iteration += 1
+
         response = client.models.generate_content(
             model=MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=512,
-            ),
+            contents=contents,
+            config=config,
         )
-        return {
-            "response": response.text,
-            "tools_used": tools_used,
-        }
-    except Exception as e:
-        print(f"Gemini API hatasi: {e}")
-        return {
-            "response": "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.",
-            "tools_used": tools_used,
-        }
+
+        candidate = response.candidates[0]
+        parts      = candidate.content.parts
+
+        # Tool call var mı kontrol et
+        function_calls = [p for p in parts if p.function_call and p.function_call.name]
+
+        if not function_calls:
+            # Tool call yok — son yanıt hazır
+            break
+
+        # Tool çağrılarını işle
+        function_response_parts = []
+
+        for part in function_calls:
+            fc        = part.function_call
+            tool_name = fc.name
+            tool_args = dict(fc.args) if fc.args else {}
+
+            # Tool'u çalıştır
+            result = execute_tool(tool_name, tool_args)
+
+            tools_used.append(tool_name)
+            tool_details.append({
+                "tool":   tool_name,
+                "input":  tool_args,
+                "output": result
+            })
+
+            function_response_parts.append(
+                types.Part(
+                    function_response=types.FunctionResponse(
+                        name=tool_name,
+                        response={"result": result}
+                    )
+                )
+            )
+
+        # Gemini'nin tool call'ını ve sonuçları history'ye ekle
+        contents.append(types.Content(role="model",  parts=parts))
+        contents.append(types.Content(role="user",   parts=function_response_parts))
+
+    # Son yanıtı çıkar
+    final_text = ""
+    for part in response.candidates[0].content.parts:
+        if hasattr(part, "text") and part.text:
+            final_text += part.text
+
+    if not final_text:
+        final_text = "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin."
+
+    return {
+        "response":     final_text,
+        "tools_used":   list(dict.fromkeys(tools_used)),  # tekrar eden tool'ları temizle
+        "tool_details": tool_details,
+    }

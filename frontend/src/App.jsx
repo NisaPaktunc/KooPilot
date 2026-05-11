@@ -1,139 +1,139 @@
 import { useState, useRef, useEffect } from "react"
+import AdminDashboard from "./pages/AdminDashboard"
 
-const API_URL = "http://127.0.0.1:8000"
+const API = "http://127.0.0.1:8000"
 
-function App() {
-  const [messages, setMessages] = useState([])
-  const [inputMessage, setInputMessage] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [sessionId, setSessionId] = useState(null)
-  const messagesEndRef = useRef(null)
+// Hangi sayfayı göster
+const page = window.location.pathname === "/admin" ? "admin" : "chat"
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+// ── Tool badge etiketleri ─────────────────────────────────────────────────────
+const TOOL_LABELS = {
+  check_stock:               "📊 Stok kontrol edildi",
+  get_order_status:          "📦 Sipariş sorgulandı",
+  get_cargo_status:          "🚚 Kargo takip edildi",
+  send_manager_notification: "🔔 Yönetici bilgilendirildi",
+  get_daily_summary:         "📈 Günlük özet alındı",
+}
+
+// ── Müşteri Chat ──────────────────────────────────────────────────────────────
+function CustomerChat() {
+  const [messages, setMessages]   = useState([])
+  const [input, setInput]         = useState("")
+  const [loading, setLoading]     = useState(false)
+  const [toolCalls, setToolCalls] = useState([])
+  const sessionId                 = useRef("session-" + Date.now())
+  const bottomRef                 = useRef(null)
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages, loading, toolCalls])
 
   const sendMessage = async () => {
-    const trimmed = inputMessage.trim()
-    if (!trimmed || isLoading) return
+    const text = input.trim()
+    if (!text || loading) return
 
-    const userMsg = { sender: "user", text: trimmed }
-    setMessages((prev) => [...prev, userMsg])
-    setInputMessage("")
-    setIsLoading(true)
+    setInput("")
+    setMessages(m => [...m, { sender: "user", text }])
+    setLoading(true)
+    setToolCalls([])
 
     try {
-      const res = await fetch(`${API_URL}/chat`, {
+      const res  = await fetch(`${API}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: trimmed,
-          session_id: sessionId,
-        }),
+        body: JSON.stringify({ message: text, session_id: sessionId.current }),
       })
       const data = await res.json()
 
-      // Session ID'yi sakla
-      if (data.session_id) {
-        setSessionId(data.session_id)
-      }
-
-      const botMsg = {
-        sender: "bot",
-        text: data.response,
+      if (data.session_id) sessionId.current = data.session_id
+      setToolCalls(data.tools_used || [])
+      setMessages(m => [...m, {
+        sender:    "bot",
+        text:      data.response,
         toolsUsed: data.tools_used || [],
-      }
-      setMessages((prev) => [...prev, botMsg])
-    } catch (err) {
-      console.error("Chat error:", err)
-      const errorMsg = { sender: "bot", text: "⚠️ Backend bağlantı hatası." }
-      setMessages((prev) => [...prev, errorMsg])
+      }])
+    } catch {
+      setMessages(m => [...m, { sender: "bot", text: "⚠️ Backend bağlantı hatası." }])
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
-  }
+  const SUGGESTIONS = [
+    "ORD-128 nerede?",
+    "Organik Bal var mı?",
+    "Domates stoğu nedir?",
+    "Bugünkü sipariş durumu",
+    "ORD-132 kargo durumu",
+  ]
 
   return (
-    <div style={styles.container}>
+    <div style={S.container}>
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerLeft}>
-          <div style={styles.logoCircle}>K</div>
+      <div style={S.header}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={S.logo}>K</div>
           <div>
-            <h1 style={styles.title}>Koopilot</h1>
-            <span style={styles.subtitle}>AI Destekli Operasyon Asistanı</span>
+            <h1 style={S.title}>Koopilot</h1>
+            <span style={S.subtitle}>AI Destekli Operasyon Asistanı</span>
           </div>
         </div>
-        <div style={styles.statusBadge}>
-          <span style={styles.statusDot}></span>
-          Claude AI Aktif
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={S.statusBadge}>
+            <span style={S.statusDot} />
+            Gemini AI Aktif
+          </div>
+          <a href="/admin" style={{
+            background: "#21262d", border: "1px solid #30363d",
+            borderRadius: 8, padding: "6px 14px", color: "#c9d1d9",
+            textDecoration: "none", fontSize: 12,
+          }}>
+            📊 Yönetici Paneli
+          </a>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div style={styles.messagesArea}>
+      {/* Mesajlar */}
+      <div style={S.messagesArea}>
         {messages.length === 0 && (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyIcon}>🤖</div>
-            <p style={styles.emptyText}>Merhaba! Ben Koopilot.</p>
-            <p style={styles.emptyHint}>
-              Stok sorgulamak için bir mesaj yazın.
+          <div style={S.emptyState}>
+            <div style={{ fontSize: "3rem", marginBottom: 8 }}>🤖</div>
+            <p style={{ fontSize: "1.2rem", color: "#c9d1d9", fontWeight: 500 }}>
+              Merhaba! Ben Koopilot.
             </p>
-            <div style={styles.suggestionsRow}>
-              {[
-                "Domates stokta var mı?",
-                "Biber stok durumu nedir?",
-                "Salatalık kaldı mı?",
-              ].map((suggestion) => (
-                <button
-                  key={suggestion}
-                  style={styles.suggestionChip}
-                  onClick={() => {
-                    setInputMessage(suggestion)
-                  }}
-                >
-                  {suggestion}
-                </button>
+            <p style={{ fontSize: "0.9rem", color: "#8b949e", marginBottom: 16 }}>
+              Sipariş, stok ve kargo sorularınızı yanıtlıyorum.
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+              {SUGGESTIONS.map(s => (
+                <button key={s} onClick={() => setInput(s)} style={S.chip}>{s}</button>
               ))}
             </div>
           </div>
         )}
+
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              ...styles.messageBubbleRow,
-              justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
-            }}
-          >
-            {msg.sender === "bot" && <div style={styles.botAvatar}>K</div>}
-            <div
-              style={{
-                ...styles.bubble,
-                ...(msg.sender === "user" ? styles.userBubble : styles.botBubble),
-              }}
-            >
-              <div style={styles.senderLabel}>
+          <div key={i} style={{
+            ...S.row,
+            justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
+          }}>
+            {msg.sender === "bot" && <div style={S.avatar}>K</div>}
+            <div style={{
+              ...S.bubble,
+              ...(msg.sender === "user" ? S.userBubble : S.botBubble),
+            }}>
+              <div style={S.senderLabel}>
                 {msg.sender === "user" ? "Sen" : "Koopilot"}
               </div>
-              <div style={styles.messageText}>{msg.text}</div>
-              {/* Tool kullanım bilgisi */}
-              {msg.toolsUsed && msg.toolsUsed.length > 0 && (
-                <div style={styles.toolBadgeRow}>
-                  {msg.toolsUsed.map((tool, j) => (
-                    <span key={j} style={styles.toolBadge}>
-                      🔧 {tool}
+              <div style={{ fontSize: "0.95rem", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {msg.text}
+              </div>
+              {/* Kullanılan tool'lar */}
+              {msg.toolsUsed?.length > 0 && (
+                <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {msg.toolsUsed.map((t, j) => (
+                    <span key={j} style={S.toolBadge}>
+                      {TOOL_LABELS[t] || `🔧 ${t}`}
                     </span>
                   ))}
                 </div>
@@ -141,274 +141,175 @@ function App() {
             </div>
           </div>
         ))}
-        {isLoading && (
-          <div style={{ ...styles.messageBubbleRow, justifyContent: "flex-start" }}>
-            <div style={styles.botAvatar}>K</div>
-            <div style={{ ...styles.bubble, ...styles.botBubble }}>
-              <div style={styles.senderLabel}>Koopilot</div>
-              <div style={styles.typingDots}>
-                <span style={styles.dot}>●</span>
-                <span style={{ ...styles.dot, animationDelay: "0.2s" }}>●</span>
-                <span style={{ ...styles.dot, animationDelay: "0.4s" }}>●</span>
-              </div>
+
+        {/* Yükleniyor */}
+        {loading && (
+          <div style={{ ...S.row, justifyContent: "flex-start" }}>
+            <div style={S.avatar}>K</div>
+            <div style={{ ...S.bubble, ...S.botBubble }}>
+              <div style={S.senderLabel}>Koopilot</div>
+              {/* Agent thinking göstergesi */}
+              {toolCalls.length === 0 ? (
+                <div style={{ display: "flex", gap: 4, alignItems: "center",
+                  fontSize: 12, color: "#8b949e" }}>
+                  <span>🤔 Düşünüyor</span>
+                  <span style={S.dot}>●</span>
+                  <span style={{ ...S.dot, animationDelay: "0.2s" }}>●</span>
+                  <span style={{ ...S.dot, animationDelay: "0.4s" }}>●</span>
+                </div>
+              ) : (
+                <div>
+                  {toolCalls.map((t, i) => (
+                    <div key={i} style={{
+                      fontSize: 12, color: "#7c6af7",
+                      background: "rgba(124,106,247,0.1)",
+                      border: "1px solid rgba(124,106,247,0.2)",
+                      borderRadius: 6, padding: "3px 10px",
+                      marginBottom: 4, display: "inline-block",
+                    }}>
+                      {TOOL_LABELS[t] || `🔧 ${t}`}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+        <div ref={bottomRef} />
       </div>
 
-      {/* Input Area */}
-      <div style={styles.inputArea}>
-        <div style={styles.inputWrapper}>
+      {/* Input */}
+      <div style={S.inputArea}>
+        <div style={S.inputWrapper}>
           <input
-            id="chat-input"
-            type="text"
-            style={styles.input}
-            placeholder="Mesajınızı yazın... (örn: Domates stokta var mı?)"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
+            style={S.input}
+            placeholder="Mesajınızı yazın... (örn: ORD-128 nerede?)"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            disabled={loading}
           />
           <button
-            id="send-button"
-            style={{
-              ...styles.sendButton,
-              opacity: !inputMessage.trim() || isLoading ? 0.5 : 1,
-              cursor: !inputMessage.trim() || isLoading ? "not-allowed" : "pointer",
-            }}
             onClick={sendMessage}
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={!input.trim() || loading}
+            style={{
+              ...S.sendBtn,
+              opacity: !input.trim() || loading ? 0.5 : 1,
+              cursor: !input.trim() || loading ? "not-allowed" : "pointer",
+            }}
           >
             Gönder
           </button>
         </div>
+        {/* Öneri chips — her zaman göster */}
+        {messages.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, maxWidth: 860, margin: "8px auto 0" }}>
+            {SUGGESTIONS.map(s => (
+              <button key={s} onClick={() => setInput(s)} style={S.chip}>{s}</button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Typing animation keyframes injected via style tag */}
-      <style>{`
-        @keyframes blink {
-          0%, 20% { opacity: 0.2; }
-          50% { opacity: 1; }
-          100% { opacity: 0.2; }
-        }
-      `}</style>
+      <style>{`@keyframes blink { 0%,100%{opacity:.2} 50%{opacity:1} }`}</style>
     </div>
   )
 }
 
-const styles = {
+// ── Styles ────────────────────────────────────────────────────────────────────
+const S = {
   container: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100vh",
+    display: "flex", flexDirection: "column", height: "100vh",
     fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
-    backgroundColor: "#0f1117",
-    color: "#e1e4e8",
+    backgroundColor: "#0f1117", color: "#e1e4e8",
   },
   header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "16px 24px",
-    borderBottom: "1px solid #21262d",
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "14px 24px", borderBottom: "1px solid #21262d",
     backgroundColor: "#161b22",
   },
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-  },
-  logoCircle: {
-    width: "40px",
-    height: "40px",
-    borderRadius: "12px",
-    background: "linear-gradient(135deg, #58a6ff, #bc8cff)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "1.1rem",
-    fontWeight: 800,
-    color: "#fff",
+  logo: {
+    width: 38, height: 38, borderRadius: 10,
+    background: "linear-gradient(135deg,#7c6af7,#3de6c0)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: "1.1rem", fontWeight: 800, color: "#fff",
   },
   title: {
-    margin: 0,
-    fontSize: "1.3rem",
-    fontWeight: 700,
-    background: "linear-gradient(135deg, #58a6ff, #bc8cff)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
+    margin: 0, fontSize: "1.25rem", fontWeight: 700,
+    background: "linear-gradient(135deg,#7c6af7,#3de6c0)",
+    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
   },
-  subtitle: {
-    fontSize: "0.75rem",
-    color: "#8b949e",
-  },
+  subtitle: { fontSize: "0.75rem", color: "#8b949e" },
   statusBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "0.75rem",
-    color: "#7ee787",
-    backgroundColor: "rgba(126, 231, 135, 0.1)",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    border: "1px solid rgba(126, 231, 135, 0.2)",
+    display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem",
+    color: "#7ee787", background: "rgba(126,231,135,0.1)",
+    padding: "5px 12px", borderRadius: 20,
+    border: "1px solid rgba(126,231,135,0.2)",
   },
   statusDot: {
-    width: "6px",
-    height: "6px",
-    borderRadius: "50%",
-    backgroundColor: "#7ee787",
+    width: 6, height: 6, borderRadius: "50%",
+    backgroundColor: "#7ee787", display: "inline-block",
   },
   messagesArea: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
+    flex: 1, overflowY: "auto", padding: "20px 24px",
+    display: "flex", flexDirection: "column", gap: 12,
   },
   emptyState: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
+    flex: 1, display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center", gap: 6,
   },
-  emptyIcon: {
-    fontSize: "3rem",
-    marginBottom: "8px",
+  row: { display: "flex", alignItems: "flex-start", gap: 10 },
+  avatar: {
+    width: 30, height: 30, borderRadius: "50%",
+    background: "linear-gradient(135deg,#7c6af7,#3de6c0)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: "0.8rem", fontWeight: 700, color: "#fff",
+    flexShrink: 0, marginTop: 4,
   },
-  emptyText: {
-    fontSize: "1.2rem",
-    color: "#c9d1d9",
-    fontWeight: 500,
-  },
-  emptyHint: {
-    fontSize: "0.9rem",
-    color: "#8b949e",
-    marginBottom: "16px",
-  },
-  suggestionsRow: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    justifyContent: "center",
-  },
-  suggestionChip: {
-    padding: "8px 16px",
-    borderRadius: "20px",
-    border: "1px solid #30363d",
-    backgroundColor: "#21262d",
-    color: "#c9d1d9",
-    fontSize: "0.85rem",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  messageBubbleRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "10px",
-  },
-  botAvatar: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    background: "linear-gradient(135deg, #58a6ff, #bc8cff)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "0.85rem",
-    fontWeight: 700,
-    color: "#fff",
-    flexShrink: 0,
-    marginTop: "4px",
-  },
-  bubble: {
-    maxWidth: "70%",
-    padding: "10px 14px",
-    borderRadius: "12px",
-    lineHeight: 1.5,
-  },
-  userBubble: {
-    backgroundColor: "#1f6feb",
-    borderBottomRightRadius: "4px",
-  },
+  bubble: { maxWidth: "72%", padding: "10px 14px", borderRadius: 12, lineHeight: 1.5 },
+  userBubble: { background: "#1f6feb", borderBottomRightRadius: 4 },
   botBubble: {
-    backgroundColor: "#21262d",
-    borderBottomLeftRadius: "4px",
+    background: "#21262d", borderBottomLeftRadius: 4,
     border: "1px solid #30363d",
   },
   senderLabel: {
-    fontSize: "0.7rem",
-    fontWeight: 600,
-    marginBottom: "4px",
-    opacity: 0.7,
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  },
-  messageText: {
-    fontSize: "0.95rem",
-    wordBreak: "break-word",
-    whiteSpace: "pre-wrap",
-  },
-  toolBadgeRow: {
-    display: "flex",
-    gap: "6px",
-    marginTop: "8px",
-    flexWrap: "wrap",
+    fontSize: "0.68rem", fontWeight: 600, marginBottom: 4,
+    opacity: 0.65, textTransform: "uppercase", letterSpacing: "0.5px",
   },
   toolBadge: {
-    fontSize: "0.7rem",
-    padding: "3px 8px",
-    borderRadius: "12px",
-    backgroundColor: "rgba(88, 166, 255, 0.15)",
-    color: "#58a6ff",
-    border: "1px solid rgba(88, 166, 255, 0.25)",
+    fontSize: "0.7rem", padding: "2px 8px", borderRadius: 12,
+    background: "rgba(124,106,247,0.12)", color: "#a08af5",
+    border: "1px solid rgba(124,106,247,0.2)",
   },
-  typingDots: {
-    display: "flex",
-    gap: "4px",
-    padding: "4px 0",
+  chip: {
+    padding: "5px 12px", borderRadius: 20, fontSize: "0.8rem",
+    border: "1px solid #30363d", background: "#21262d",
+    color: "#c9d1d9", cursor: "pointer",
   },
   dot: {
-    fontSize: "0.7rem",
-    color: "#8b949e",
-    animation: "blink 1.4s infinite",
+    fontSize: "0.6rem", color: "#8b949e",
+    animation: "blink 1.4s infinite", display: "inline-block",
   },
   inputArea: {
-    padding: "16px 24px",
-    borderTop: "1px solid #21262d",
+    padding: "14px 24px", borderTop: "1px solid #21262d",
     backgroundColor: "#161b22",
   },
-  inputWrapper: {
-    display: "flex",
-    gap: "10px",
-    maxWidth: "900px",
-    margin: "0 auto",
-  },
+  inputWrapper: { display: "flex", gap: 10, maxWidth: 860, margin: "0 auto" },
   input: {
-    flex: 1,
-    padding: "12px 16px",
-    borderRadius: "10px",
-    border: "1px solid #30363d",
-    backgroundColor: "#0d1117",
-    color: "#e1e4e8",
-    fontSize: "0.95rem",
-    outline: "none",
-    transition: "border-color 0.2s",
+    flex: 1, padding: "11px 16px", borderRadius: 10,
+    border: "1px solid #30363d", background: "#0d1117",
+    color: "#e1e4e8", fontSize: "0.95rem", outline: "none",
   },
-  sendButton: {
-    padding: "12px 24px",
-    borderRadius: "10px",
-    border: "none",
-    background: "linear-gradient(135deg, #1f6feb, #8b5cf6)",
-    color: "#fff",
-    fontSize: "0.95rem",
-    fontWeight: 600,
-    transition: "opacity 0.2s, transform 0.1s",
+  sendBtn: {
+    padding: "11px 24px", borderRadius: 10, border: "none",
+    background: "linear-gradient(135deg,#7c6af7,#3de6c0)",
+    color: "#fff", fontSize: "0.95rem", fontWeight: 600,
+    transition: "opacity 0.15s",
   },
 }
 
-export default App
+// ── Router ────────────────────────────────────────────────────────────────────
+export default function App() {
+  if (page === "admin") return <AdminDashboard />
+  return <CustomerChat />
+}

@@ -1,0 +1,25 @@
+{
+  "TRK-4891": {
+    "durum": "Dağıtımda 🚚",
+    "konum": "İstanbul Anadolu Dağıtım Merkezi",
+    "tahmini_teslim": "Bugün 14:00-18:00",
+    "gecikme": false,
+    "son_guncelleme": "Bugün 09:15"
+  },
+  "TRK-4895": {
+    "durum": "Gecikme ⚠️",
+    "konum": "Ankara Transfer Merkezi",
+    "tahmini_teslim": "2 gün sonra",
+    "gecikme": true,
+    "gecikme_nedeni": "Hava koşulları nedeniyle gecikmeli",
+    "son_guncelleme": "Bugün 07:30"
+  },
+  "TRK-4880": {
+    "durum": "Teslim Edildi ✅",
+    "konum": "Alıcı teslim aldı",
+    "tahmini_teslim": "Teslim edildi",
+    "gecikme": false,
+    "teslim_saati": "Dün 15:43",
+    "son_guncelleme": "Dün 15:43"
+  }
+}
