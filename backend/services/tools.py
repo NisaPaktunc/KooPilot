@@ -8,6 +8,7 @@ Her tool:
 """
 
 import json
+from datetime import datetime, timedelta
 from database import SessionLocal
 from models import Product, Order, Notification
 
@@ -317,9 +318,22 @@ def get_daily_summary(date: str = None) -> str:
         db.close()
 
 
-# ── Yardımcı: DB'ye bildirim kaydet ──────────────────────────────────────────
+# ── Yardımcı: DB'ye bildirim kaydet (24 saat deduplikasyonlu) ─────────────────
 
 def _save_notification(title, message, priority, notif_type, db) -> int:
+    """Aynı başlıkta son 24 saat içinde bildirim varsa tekrar oluşturmaz."""
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    existing = (
+        db.query(Notification)
+        .filter(
+            Notification.title == title,
+            Notification.created_at >= cutoff,
+        )
+        .first()
+    )
+    if existing:
+        return existing.id
+
     notif = Notification(
         type=notif_type,
         title=title,
