@@ -16,6 +16,7 @@ const TOOL_LABELS = {
   list_all_products:         "Ürünler listelendi",
   get_sales_analytics:       "Satış analizi yapıldı",
   get_stock_forecast:        "Stok tahmini yapıldı",
+  run_smart_analysis:        "Akıllı analiz yapıldı",
 }
 
 const STORAGE_SESSION = "koopilot_session_id"

@@ -563,6 +563,14 @@ def dashboard_analytics():
         db.close()
 
 
+# ── Dashboard Akıllı İçgörüler ────────────────────────────────────────────────
+
+@app.get("/dashboard/insights")
+def dashboard_insights():
+    from services.analytics_engine import generate_insights
+    return generate_insights()
+
+
 # ── WebSocket: Canlı Bildirimler ──────────────────────────────────────────────
 
 @app.websocket("/ws/notifications")

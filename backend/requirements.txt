@@ -3,7 +3,7 @@ uvicorn[standard]
 sqlalchemy
 google-genai
 python-dotenv==1.0.1
-pydantic==2.6.3
+pydantic
 websockets>=13.0
 twilio
 python-multipart

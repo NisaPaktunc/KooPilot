@@ -73,7 +73,8 @@ export default function AdminDashboard() {
     orders: [],
     low_stock: [],
     products: [],
-    analytics: null
+    analytics: null,
+    insights: null
   })
 
   // Tab State Handlers
@@ -87,9 +88,10 @@ export default function AdminDashboard() {
       fetch(`${API}/orders?limit=50`).then(r => r.json()),
       fetch(`${API}/products/low-stock`).then(r => r.json()),
       fetch(`${API}/products`).then(r => r.json()),
-      fetch(`${API}/dashboard/analytics`).then(r => r.json()).catch(() => null)
-    ]).then(([s, o, l, p, a]) => {
-      setData({ summary: s, orders: o, low_stock: l, products: p, analytics: a })
+      fetch(`${API}/dashboard/analytics`).then(r => r.json()).catch(() => null),
+      fetch(`${API}/dashboard/insights`).then(r => r.json()).catch(() => null)
+    ]).then(([s, o, l, p, a, ins]) => {
+      setData({ summary: s, orders: o, low_stock: l, products: p, analytics: a, insights: ins })
     }).catch(console.error)
   }, [])
 
@@ -108,6 +110,7 @@ export default function AdminDashboard() {
     { id: "siparisler", label: "Siparişler", icon: Icon.Package },
     { id: "stok", label: "Stok", icon: Icon.Boxes },
     { id: "analitik", label: "Analitik", icon: Icon.Chart },
+    { id: "icgoruler", label: "İçgörüler", icon: Icon.Sparkles },
     { id: "bildirimler", label: "Bildirimler", icon: Icon.Bell, badge: unread },
   ]
 
@@ -330,6 +333,109 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )
+    }
+
+    if (activeTab === "icgoruler" && data.insights) {
+      const ins = data.insights
+      const h = ins.health_score
+      const gradeColors = { 'A+': 'var(--success)', 'A': 'var(--success)', 'B': 'var(--info)', 'C': 'var(--warning)', 'D': 'var(--destructive)' }
+      const priorityStyles = {
+        'ACIL': { bg: 'rgba(239,68,68,0.1)', color: 'var(--destructive)' },
+        'YUKSEK': { bg: 'rgba(245,158,11,0.1)', color: 'var(--warning)' },
+        'ORTA': { bg: 'rgba(59,130,246,0.1)', color: 'var(--info)' },
+      }
+      return (
+        <div className="space-y">
+          {/* Health Score */}
+          <div className="card" style={{ padding: 32, textAlign: 'center', border: `2px solid ${gradeColors[h.grade] || 'var(--border)'}` }}>
+            <div style={{ fontSize: 64, fontWeight: 800, color: gradeColors[h.grade], lineHeight: 1 }}>{h.score}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>/ 100 ({h.grade})</div>
+            <div className="kpi-label" style={{ marginTop: 12 }}>Isletme Saglik Skoru</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 20 }}>
+              {Object.entries(h.details).map(([k, v]) => (
+                <div key={k} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700 }}>{v}<span style={{ fontSize: 12, color: 'var(--muted)' }}>/25</span></div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'capitalize' }}>{k === 'revenue' ? 'Gelir' : k === 'stock' ? 'Stok' : k === 'customer' ? 'Musteri' : 'Operasyon'}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="card">
+            <div className="card-header"><h2><Icon.Alert /> Onerilen Aksiyonlar</h2></div>
+            <div>
+              {ins.actions.map((a, i) => (
+                <div key={i} style={{ padding: 16, borderBottom: '1px solid var(--border)', display: 'flex', gap: 12 }}>
+                  <span className="priority-badge" style={{ ...(priorityStyles[a.priority] || priorityStyles['ORTA']), padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, flexShrink: 0, height: 'fit-content' }}>{a.priority}</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{a.action}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{a.reason}</div>
+                    <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 2 }}>Etki: {a.impact}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid-2">
+            {/* Stock Risks */}
+            <div className="card">
+              <div className="card-header"><h2><Icon.Alert /> Stok Risk Skorlari</h2></div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table">
+                  <thead><tr><th>Urun</th><th className="text-right">Skor</th><th className="text-right">Stok</th><th className="text-right">Gun</th></tr></thead>
+                  <tbody>
+                    {ins.stock_risks.slice(0, 10).map(s => (
+                      <tr key={s.id}>
+                        <td style={{ fontWeight: 500 }}>{s.name}</td>
+                        <td className="tabular text-right" style={{ color: s.risk_score >= 70 ? 'var(--destructive)' : s.risk_score >= 50 ? 'var(--warning)' : 'var(--success)', fontWeight: 700 }}>{s.risk_score}</td>
+                        <td className="tabular text-right">{s.current_stock} {s.unit}</td>
+                        <td className="tabular text-right">{s.days_until_empty >= 0 ? s.days_until_empty : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Customer Segments */}
+            <div className="card">
+              <div className="card-header"><h2><Icon.Trophy /> Musteri Segmentleri</h2></div>
+              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {ins.customers.segments.map(seg => {
+                  const segColors = { VIP: 'bar-fill-primary', Sadik: 'bar-fill-success', Normal: 'bar-fill-info', Yeni: 'bar-fill-warning' }
+                  return <BarRow key={seg.segment} label={`${seg.segment} (${seg.count} musteri)`} value={`${seg.total_revenue.toLocaleString('tr-TR')} TL`} pct={(seg.total_revenue / ins.revenue.total_revenue) * 100} colorCls={segColors[seg.segment] || 'bar-fill-info'} />
+                })}
+                <div style={{ marginTop: 8, padding: 12, background: 'var(--primary-light)', borderRadius: 10, fontSize: 13 }}>
+                  <strong>En Degerli:</strong> {ins.customers.top_customer.name} — {ins.customers.top_customer.total.toLocaleString('tr-TR')} TL ({ins.customers.top_customer.orders} siparis)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Categories */}
+          <div className="card">
+            <div className="card-header"><h2><Icon.Folder /> Kategori Performansi</h2></div>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="table">
+                <thead><tr><th>Kategori</th><th className="text-right">Ciro</th><th className="text-right">Satis</th><th className="text-right">Urun</th><th className="text-right">Marj</th></tr></thead>
+                <tbody>
+                  {ins.categories.map(c => (
+                    <tr key={c.category}>
+                      <td style={{ fontWeight: 600, textTransform: 'capitalize' }}>{c.category}</td>
+                      <td className="tabular text-right" style={{ fontWeight: 600 }}>{c.revenue.toLocaleString('tr-TR')} TL</td>
+                      <td className="tabular text-right">{c.items_sold} adet</td>
+                      <td className="tabular text-right">{c.unique_products}</td>
+                      <td className="tabular text-right" style={{ color: 'var(--success)' }}>%{c.margin_estimate.toFixed(0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )

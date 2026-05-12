@@ -174,6 +174,26 @@ TOOL_DEFINITIONS = [
                 }
             }
         }
+    },
+    {
+        "name": "run_smart_analysis",
+        "description": (
+            "Veritabanina baglanan akilli analiz motorunu calistirir. "
+            "Isletme saglik skoru, gelir analizi, stok risk skorlama, musteri segmentasyonu, "
+            "kategori performansi ve aksiyonel oneriler uretir. "
+            "Yonetici 'analiz yap', 'isletme durumu', 'oneriler', 'saglik skoru', "
+            "'musteri analizi', 'isgoru', 'rapor' dediginde cagir."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "focus": {
+                    "type": "string",
+                    "enum": ["full", "revenue", "stock", "customers", "actions"],
+                    "description": "Analiz odagi. Varsayilan: full (tam rapor)"
+                }
+            }
+        }
     }
 ]
 
@@ -588,6 +608,11 @@ def _save_notification(title, message, priority, notif_type, db) -> int:
 
 # ── Tool Dispatcher ───────────────────────────────────────────────────────────
 
+def run_smart_analysis(focus: str = "full") -> str:
+    from services.analytics_engine import generate_insights_text
+    return generate_insights_text()
+
+
 TOOL_HANDLERS = {
     "check_stock":               check_stock,
     "get_order_status":          get_order_status,
@@ -597,6 +622,7 @@ TOOL_HANDLERS = {
     "list_all_products":         list_all_products,
     "get_sales_analytics":       get_sales_analytics,
     "get_stock_forecast":        get_stock_forecast,
+    "run_smart_analysis":        run_smart_analysis,
 }
 
 
