@@ -346,3 +346,27 @@ body {
 .mt-2 { margin-top: 8px; }
 .mb-4 { margin-bottom: 16px; }
 .space-y > *:not(:last-child) { margin-bottom: 24px; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn-primary, .btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; transition: all .15s;
+}
+.btn-primary {
+  background: var(--gradient-primary); color: #fff; box-shadow: 0 2px 8px rgba(22,163,74,0.25);
+}
+.btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  background: var(--secondary); color: var(--secondary-fg);
+}
+.btn-secondary:hover { background: var(--border); }
+
+.btn-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--card); cursor: pointer; color: var(--muted); transition: all .15s;
+}
+.btn-icon:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.btn-icon-danger:hover { border-color: var(--destructive); color: var(--destructive); background: rgba(239,68,68,0.08); }

@@ -1,9 +1,9 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from database import engine, SessionLocal
-from models import Base, Product, Order, OrderItem, Notification, Message
+from models import Base, Product, Order, OrderItem, Notification, Message, Supplier
 from services.ai_service import get_ai_response
 import uuid
 import json
@@ -62,6 +62,60 @@ class OrderStatusUpdate(BaseModel):
 
 class StockUpdate(BaseModel):
     quantity: int
+
+
+# ── Tam CRUD Pydantic Modelleri ───────────────────────────────────────────────
+
+class ProductCreate(BaseModel):
+    id: Optional[str] = None
+    name: str
+    category: str = "genel"
+    stock_quantity: int = 0
+    low_threshold: int = 10
+    unit_price: float = 0.0
+    unit: str = "adet"
+    supplier_id: Optional[str] = None
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    stock_quantity: Optional[int] = None
+    low_threshold: Optional[int] = None
+    unit_price: Optional[float] = None
+    unit: Optional[str] = None
+    supplier_id: Optional[str] = None
+
+class OrderCreate(BaseModel):
+    id: Optional[str] = None
+    customer_name: str
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
+    status: str = "beklemede"
+    total_amount: float = 0.0
+    tracking_number: Optional[str] = None
+    cargo_company: Optional[str] = None
+    notes: Optional[str] = None
+
+class OrderUpdate(BaseModel):
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
+    status: Optional[str] = None
+    total_amount: Optional[float] = None
+    tracking_number: Optional[str] = None
+    cargo_company: Optional[str] = None
+    notes: Optional[str] = None
+
+class SupplierCreate(BaseModel):
+    id: Optional[str] = None
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 # ── Temel ─────────────────────────────────────────────────────────────────────
@@ -243,6 +297,43 @@ async def whatsapp_webhook(background_tasks: BackgroundTasks, Body: str = Form(.
     return Response(content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>', media_type="application/xml")
 
 
+@app.get("/whatsapp/status")
+def whatsapp_status():
+    import os
+    sid = os.getenv("TWILIO_ACCOUNT_SID")
+    token = os.getenv("TWILIO_AUTH_TOKEN")
+    phone = os.getenv("TWILIO_WHATSAPP_NUMBER")
+    
+    is_connected = bool(sid and token and phone)
+    
+    return {
+        "is_connected": is_connected,
+        "phone": phone,
+        "webhook_url": "POST /webhook/whatsapp"
+    }
+
+
+@app.get("/whatsapp/sessions")
+def get_whatsapp_sessions():
+    db = SessionLocal()
+    try:
+        from sqlalchemy import func
+        # Find all unique session_ids that start with whatsapp:
+        sessions = db.query(
+            Message.session_id, 
+            func.max(Message.timestamp).label("last_message")
+        ).filter(Message.session_id.like("whatsapp:%")).group_by(Message.session_id).order_by(func.max(Message.timestamp).desc()).all()
+        
+        return [
+            {
+                "session_id": s.session_id,
+                "phone": s.session_id.replace("whatsapp:", ""),
+                "last_message": s.last_message.isoformat() if s.last_message else None
+            } for s in sessions
+        ]
+    finally:
+        db.close()
+
 
 # ── Konuşma Geçmişi ───────────────────────────────────────────────────────────
 
@@ -328,6 +419,56 @@ async def update_stock(product_id: str, body: StockUpdate):
         db.close()
 
 
+@app.post("/products")
+def create_product(body: ProductCreate):
+    db = SessionLocal()
+    try:
+        pid = body.id or f"PRD-{db.query(Product).count() + 1:03d}"
+        existing = db.query(Product).filter(Product.id == pid).first()
+        if existing:
+            return {"error": f"{pid} kodlu ürün zaten mevcut"}
+        product = Product(
+            id=pid, name=body.name, category=body.category,
+            stock_quantity=body.stock_quantity, low_threshold=body.low_threshold,
+            unit_price=body.unit_price, unit=body.unit, supplier_id=body.supplier_id
+        )
+        db.add(product)
+        db.commit()
+        return {"success": True, "id": pid, "name": body.name}
+    finally:
+        db.close()
+
+
+@app.put("/products/{product_id}")
+def update_product(product_id: str, body: ProductUpdate):
+    db = SessionLocal()
+    try:
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return {"error": "Ürün bulunamadı"}
+        for field, value in body.model_dump(exclude_none=True).items():
+            setattr(product, field, value)
+        db.commit()
+        return {"success": True, "id": product_id}
+    finally:
+        db.close()
+
+
+@app.delete("/products/{product_id}")
+def delete_product(product_id: str):
+    db = SessionLocal()
+    try:
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return {"error": "Ürün bulunamadı"}
+        db.query(OrderItem).filter(OrderItem.product_id == product_id).delete()
+        db.delete(product)
+        db.commit()
+        return {"success": True, "id": product_id}
+    finally:
+        db.close()
+
+
 # ── Siparişler ────────────────────────────────────────────────────────────────
 
 @app.get("/orders")
@@ -407,6 +548,118 @@ async def update_order_status(order_id: str, body: OrderStatusUpdate):
         })
 
         return {"success": True, "order_id": order_id, "new_status": body.status}
+    finally:
+        db.close()
+
+
+@app.post("/orders")
+def create_order(body: OrderCreate):
+    db = SessionLocal()
+    try:
+        oid = body.id or f"ORD-{db.query(Order).count() + 1:03d}"
+        existing = db.query(Order).filter(Order.id == oid).first()
+        if existing:
+            return {"error": f"{oid} numaralı sipariş zaten mevcut"}
+        order = Order(
+            id=oid, customer_name=body.customer_name, customer_phone=body.customer_phone,
+            customer_email=body.customer_email, status=body.status,
+            total_amount=body.total_amount, tracking_number=body.tracking_number,
+            cargo_company=body.cargo_company, notes=body.notes
+        )
+        db.add(order)
+        db.commit()
+        return {"success": True, "id": oid, "customer": body.customer_name}
+    finally:
+        db.close()
+
+
+@app.put("/orders/{order_id}")
+def update_order(order_id: str, body: OrderUpdate):
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order:
+            return {"error": "Sipariş bulunamadı"}
+        for field, value in body.model_dump(exclude_none=True).items():
+            setattr(order, field, value)
+        db.commit()
+        return {"success": True, "id": order_id}
+    finally:
+        db.close()
+
+
+@app.delete("/orders/{order_id}")
+def delete_order(order_id: str):
+    db = SessionLocal()
+    try:
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order:
+            return {"error": "Sipariş bulunamadı"}
+        db.query(OrderItem).filter(OrderItem.order_id == order_id).delete()
+        db.delete(order)
+        db.commit()
+        return {"success": True, "id": order_id}
+    finally:
+        db.close()
+
+
+# ── Tedarikçiler ──────────────────────────────────────────────────────────────────
+
+@app.get("/suppliers")
+def get_suppliers():
+    db = SessionLocal()
+    try:
+        suppliers = db.query(Supplier).all()
+        return [
+            {"id": s.id, "name": s.name, "email": s.email, "phone": s.phone,
+             "product_count": db.query(Product).filter(Product.supplier_id == s.id).count()}
+            for s in suppliers
+        ]
+    finally:
+        db.close()
+
+
+@app.post("/suppliers")
+def create_supplier(body: SupplierCreate):
+    db = SessionLocal()
+    try:
+        sid = body.id or f"SUP-{db.query(Supplier).count() + 1:03d}"
+        existing = db.query(Supplier).filter(Supplier.id == sid).first()
+        if existing:
+            return {"error": f"{sid} kodlu tedarikçi zaten mevcut"}
+        supplier = Supplier(id=sid, name=body.name, email=body.email, phone=body.phone)
+        db.add(supplier)
+        db.commit()
+        return {"success": True, "id": sid, "name": body.name}
+    finally:
+        db.close()
+
+
+@app.put("/suppliers/{supplier_id}")
+def update_supplier(supplier_id: str, body: SupplierUpdate):
+    db = SessionLocal()
+    try:
+        supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+        if not supplier:
+            return {"error": "Tedarikçi bulunamadı"}
+        for field, value in body.model_dump(exclude_none=True).items():
+            setattr(supplier, field, value)
+        db.commit()
+        return {"success": True, "id": supplier_id}
+    finally:
+        db.close()
+
+
+@app.delete("/suppliers/{supplier_id}")
+def delete_supplier(supplier_id: str):
+    db = SessionLocal()
+    try:
+        supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+        if not supplier:
+            return {"error": "Tedarikçi bulunamadı"}
+        db.delete(supplier)
+        db.commit()
+        return {"success": True, "id": supplier_id}
     finally:
         db.close()
 
@@ -571,7 +824,26 @@ def dashboard_insights():
     return generate_insights()
 
 
-# ── WebSocket: Canlı Bildirimler ──────────────────────────────────────────────
+# ── Dosya Yuklemesi (Excel / CSV Import) ──────────────────────────────────────
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...), data_type: str = None):
+    """Excel veya CSV dosyasi yukleyerek toplu veri aktarimi."""
+    from services.import_service import import_file
+    content = await file.read()
+    result = import_file(content, file.filename, data_type)
+    return result
+
+
+@app.post("/upload/preview")
+async def upload_preview(file: UploadFile = File(...)):
+    """Dosyanin ilk 5 satirini onizler, veri tipini otomatik tespit eder."""
+    from services.import_service import preview_file
+    content = await file.read()
+    return preview_file(content, file.filename)
+
+
+# ── WebSocket: Canli Bildirimler ──────────────────────────────────────────────
 
 @app.websocket("/ws/notifications")
 async def ws_notifications(websocket: WebSocket):
