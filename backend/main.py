@@ -152,6 +152,98 @@ async def chat(request: ChatRequest):
     }
 
 
+# ── WhatsApp Webhook ──────────────────────────────────────────────────────────
+
+from fastapi import Form, BackgroundTasks, Response
+from integrations.whatsapp import send_whatsapp_message
+import logging
+
+logger = logging.getLogger(__name__)
+
+async def process_whatsapp_message(sender_id: str, message_text: str):
+    """
+    Background task to process WhatsApp message, call AI, and send response back.
+    sender_id is used as session_id.
+    """
+    db = SessionLocal()
+    try:
+        # Konuşma geçmişini çek (son 10 mesaj)
+        history_rows = (
+            db.query(Message)
+            .filter(Message.session_id == sender_id)
+            .order_by(Message.timestamp.desc())
+            .limit(10)
+            .all()
+        )
+        history_rows.reverse()
+
+        # Gemini formatına çevir
+        from google.genai import types as gtypes
+        gemini_history = []
+        for row in history_rows:
+            gemini_history.append(
+                gtypes.Content(
+                    role="user" if row.role == "user" else "model",
+                    parts=[gtypes.Part(text=row.content)]
+                )
+            )
+
+        # Kullanıcı mesajını kaydet
+        db.add(Message(session_id=sender_id, role="user", content=message_text))
+        db.commit()
+
+    finally:
+        db.close()
+
+    # Agent çağır
+    try:
+        result = get_ai_response(message_text, gemini_history)
+        response_text = result["response"]
+    except Exception as e:
+        logger.error(f"WhatsApp AI hatası: {e}")
+        response_text = "Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin."
+
+    # Yanıtı kaydet ve WhatsApp üzerinden gönder
+    db = SessionLocal()
+    try:
+        db.add(Message(session_id=sender_id, role="assistant", content=response_text))
+        db.commit()
+
+        # Bildirim varsa WebSocket ile yayınla
+        latest_notif = db.query(Notification).order_by(Notification.id.desc()).first()
+        if latest_notif and not latest_notif.is_read:
+            await manager.broadcast({
+                "type":     "new_notification",
+                "id":       latest_notif.id,
+                "title":    latest_notif.title,
+                "message":  latest_notif.message,
+                "priority": latest_notif.priority,
+                "notif_type": latest_notif.type,
+            })
+            
+    finally:
+        db.close()
+
+    # WhatsApp mesajını gönder
+    send_whatsapp_message(sender_id, response_text)
+
+
+@app.post("/webhook/whatsapp")
+async def whatsapp_webhook(background_tasks: BackgroundTasks, Body: str = Form(...), From: str = Form(...)):
+    """
+    Twilio WhatsApp Sandbox Webhook
+    """
+    logger.info(f"Received WhatsApp message from {From}: {Body}")
+    
+    # AI işlemini arka planda başlat (Twilio timeout olmaması için hemen 200 OK döneriz)
+    background_tasks.add_task(process_whatsapp_message, From, Body)
+    
+    # Twilio'nun hata vermemesi için boş bir TwiML response dönüyoruz
+    # Gerçek yanıt background task içinden REST API ile gidecek
+    return Response(content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>', media_type="application/xml")
+
+
+
 # ── Konuşma Geçmişi ───────────────────────────────────────────────────────────
 
 @app.get("/chat/history/{session_id}")
