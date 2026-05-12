@@ -115,7 +115,7 @@ async def chat(request: ChatRequest):
         tools_used    = result["tools_used"]
         tool_details  = result["tool_details"]
     except Exception as e:
-        print(f"❌ AI hatası: {e}")
+        print(f"AI hatasi: {e}")
         response_text = f"Üzgünüm, bir hata oluştu. ({str(e)[:100]})"
         tools_used    = []
         tool_details  = []

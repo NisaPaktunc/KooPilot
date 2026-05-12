@@ -3,334 +3,382 @@ import { useNotifications } from "../hooks/useNotifications"
 
 const API = "http://127.0.0.1:8000"
 
-const STATUS_LABEL = {
-  beklemede:      { label: "Beklemede",      color: "#f7a26a", bg: "rgba(247,162,106,0.12)" },
-  hazirlaniyor:   { label: "Hazırlanıyor",   color: "#58a6ff", bg: "rgba(88,166,255,0.12)"  },
-  kargoda:        { label: "Kargoda 🚚",     color: "#3de6c0", bg: "rgba(61,230,192,0.12)"  },
-  teslim_edildi:  { label: "Teslim Edildi ✅",color: "#7ee787", bg: "rgba(126,231,135,0.12)" },
-  iptal:          { label: "İptal ❌",        color: "#f76a8a", bg: "rgba(247,106,138,0.12)" },
+// --- Icons (Inline SVGs to avoid external dependencies) ---
+const Icon = {
+  Layout: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>,
+  Package: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
+  Boxes: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+  Chart: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
+  Bell: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
+  Sparkles: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
+  Msg: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  Search: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+  Clock: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Truck: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="15" height="10" x="3" y="8" rx="2"/><path d="M18 8h3a1 1 0 0 1 1 1v5h-4z"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg>,
+  Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>,
+  Alert: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
+  Wallet: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a8 8 0 0 1-5 7.96V16a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v5.96A8 8 0 0 1 3 15V9a2 2 0 0 1 2-2h14z"/></svg>,
+  Trophy: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+  Folder: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>,
+  Pie: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
 }
 
-const PRIORITY_COLOR = {
-  dusuk: "#7ee787", orta: "#58a6ff", yuksek: "#f7a26a", kritik: "#f76a8a",
+// --- Status & Helpers ---
+const STATUS_LABELS = {
+  beklemede: "Beklemede",
+  hazirlaniyor: "Hazırlanıyor",
+  kargoda: "Kargoda",
+  teslim_edildi: "Teslim Edildi",
+  iptal: "İptal",
 }
 
-const td = { padding: "10px 12px", fontSize: 13, color: "#c9d1d9", verticalAlign: "middle" }
-const thStyle = { padding: "10px 12px", textAlign: "left", fontSize: 11, color: "#8b949e", letterSpacing: "0.5px", textTransform: "uppercase", fontWeight: 600 }
-const cardBox = { background: "#161b22", border: "1px solid #21262d", borderRadius: 12, padding: 20 }
+function StatusPill({ status }) {
+  return <span className={`pill pill-${status}`}>{STATUS_LABELS[status] || status}</span>
+}
 
-// ── Alt bileşenler ────────────────────────────────────────────────────────────
-function SummaryCard({ icon, label, value, color, sub }) {
+// --- Components ---
+function BarRow({ label, value, pct, colorCls }) {
   return (
-    <div style={{ background: "#161b22", border: `1px solid ${color}33`, borderLeft: `3px solid ${color}`, borderRadius: 12, padding: "18px 20px" }}>
-      <div style={{ fontSize: 22, marginBottom: 6 }}>{icon}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 12, color: "#8b949e", marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: "#58a6ff", marginTop: 2 }}>{sub}</div>}
-    </div>
-  )
-}
-
-function NotificationItem({ notif, onRead }) {
-  const pColor = PRIORITY_COLOR[notif.priority] || "#58a6ff"
-  return (
-    <div onClick={() => !notif.is_read && onRead(notif.id)} style={{ padding: "12px 16px", borderBottom: "1px solid #21262d", cursor: notif.is_read ? "default" : "pointer", background: notif.is_read ? "transparent" : "rgba(88,166,255,0.04)", transition: "background 0.15s" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: notif.is_read ? "#30363d" : pColor, flexShrink: 0, marginTop: 5 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: notif.is_read ? "#8b949e" : "#e1e4e8", marginBottom: 2 }}>{notif.title}</div>
-          <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.4 }}>{notif.message}</div>
-          <div style={{ fontSize: 10, color: "#484f58", marginTop: 4 }}>
-            {notif.created_at ? new Date(notif.created_at).toLocaleString("tr-TR") : ""}
-            {" · "}<span style={{ color: pColor }}>{notif.priority}</span>
-          </div>
-        </div>
+    <div className="bar-row">
+      <div className="bar-row-head">
+        <span className="bar-row-label">{label}</span>
+        <span className="bar-row-value">{value}</span>
       </div>
-    </div>
-  )
-}
-
-function OrderRow({ order, onStatusChange }) {
-  const s = STATUS_LABEL[order.status] || { label: order.status, color: "#8b949e", bg: "transparent" }
-  return (
-    <tr style={{ borderBottom: "1px solid #21262d" }}>
-      <td style={td}>{order.id}</td>
-      <td style={td}>{order.customer_name}</td>
-      <td style={td}><span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, background: s.bg, color: s.color, fontWeight: 600 }}>{s.label}</span></td>
-      <td style={td}>{order.total_amount?.toLocaleString("tr-TR")} ₺</td>
-      <td style={td}><span style={{ fontFamily: "monospace", fontSize: 12, color: "#8b949e" }}>{order.tracking_number || "—"}</span></td>
-      <td style={td}>
-        <select defaultValue={order.status} onChange={e => onStatusChange(order.id, e.target.value)} style={{ background: "#21262d", color: "#c9d1d9", border: "1px solid #30363d", borderRadius: 6, padding: "3px 6px", fontSize: 12, cursor: "pointer" }}>
-          {Object.entries(STATUS_LABEL).map(([v, { label }]) => (<option key={v} value={v}>{label}</option>))}
-        </select>
-      </td>
-    </tr>
-  )
-}
-
-function StockBar({ product }) {
-  const pct = Math.min(100, Math.round((product.stock_quantity / (product.low_threshold * 3)) * 100))
-  const color = product.stock_quantity === 0 ? "#f76a8a" : product.stock_quantity <= product.low_threshold ? "#f7a26a" : "#3de6c0"
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ fontSize: 13, color: "#c9d1d9" }}>{product.name}</span>
-        <span style={{ fontSize: 12, fontFamily: "monospace", color }}>{product.stock_quantity} {product.unit}</span>
-      </div>
-      <div style={{ height: 6, background: "#21262d", borderRadius: 3, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.4s ease" }} />
-      </div>
-      <div style={{ fontSize: 10, color: "#484f58", marginTop: 2 }}>
-        Eşik: {product.low_threshold} {product.unit}
-        {product.stock_quantity === 0 && " · TÜKENDİ 🔴"}
+      <div className="bar-track">
+        <div className={`bar-fill ${colorCls}`} style={{ width: `${Math.max(2, pct)}%` }} />
       </div>
     </div>
   )
 }
 
-// Basit bar chart bileşeni
-function SimpleBar({ items, labelKey, valueKey, maxVal, color, suffix = "" }) {
-  const mx = maxVal || Math.max(...items.map(i => i[valueKey]), 1)
-  return items.map((item, i) => (
-    <div key={i} style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-        <span style={{ fontSize: 13, color: "#c9d1d9" }}>{item[labelKey]}</span>
-        <span style={{ fontSize: 12, fontFamily: "monospace", color }}>{typeof item[valueKey] === "number" ? item[valueKey].toLocaleString("tr-TR") : item[valueKey]}{suffix}</span>
+function ChartCard({ title, icon: IconCmp, accent, children }) {
+  const textColor = `text-${accent === 'primary' ? 'primary' : accent === 'success' ? 'success' : accent === 'warning' ? 'warning' : 'info'}`
+  return (
+    <section className="card">
+      <header className="card-header">
+        <h2 style={{ fontSize: 14 }} className={textColor}><IconCmp /> {title}</h2>
+      </header>
+      <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {children}
       </div>
-      <div style={{ height: 8, background: "#21262d", borderRadius: 4, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${(item[valueKey] / mx) * 100}%`, background: color, borderRadius: 4, transition: "width 0.4s ease" }} />
-      </div>
-    </div>
-  ))
+    </section>
+  )
 }
 
-// ── Ana Bileşen ───────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-  const [summary, setSummary] = useState(null)
-  const [orders, setOrders] = useState([])
-  const [lowStock, setLowStock] = useState([])
-  const [activeTab, setActiveTab] = useState("overview")
-  const [allProducts, setAllProducts] = useState([])
-  const [analytics, setAnalytics] = useState(null)
-  const [orderSearch, setOrderSearch] = useState("")
-  const [orderStatusFilter, setOrderStatusFilter] = useState("")
-  const [productSearch, setProductSearch] = useState("")
+  const [activeTab, setActiveTab] = useState("genel")
   const { notifications, unread, markRead, markAllRead } = useNotifications()
-
-  const loadAll = async () => {
-    try {
-      const [s, o, ls, p, a] = await Promise.all([
-        fetch(`${API}/dashboard/summary`).then(r => r.json()),
-        fetch(`${API}/orders?limit=50`).then(r => r.json()),
-        fetch(`${API}/products/low-stock`).then(r => r.json()),
-        fetch(`${API}/products`).then(r => r.json()),
-        fetch(`${API}/dashboard/analytics`).then(r => r.json()).catch(() => null),
-      ])
-      setSummary(s); setOrders(o); setLowStock(ls); setAllProducts(p); setAnalytics(a)
-    } catch (e) { console.error("Dashboard yüklenemedi:", e) }
-  }
-
-  useEffect(() => { loadAll() }, [])
-
-  const handleStatusChange = async (orderId, newStatus) => {
-    await fetch(`${API}/orders/${orderId}/status`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) })
-    loadAll()
-  }
-
-  // Filtreleme
-  const filteredOrders = orders.filter(o => {
-    const matchSearch = !orderSearch || o.id.toLowerCase().includes(orderSearch.toLowerCase()) || o.customer_name.toLowerCase().includes(orderSearch.toLowerCase())
-    const matchStatus = !orderStatusFilter || o.status === orderStatusFilter
-    return matchSearch && matchStatus
+  const [data, setData] = useState({
+    summary: { total_orders: 0, pending: 0, in_cargo: 0, delivered: 0, critical_stock: 0 },
+    orders: [],
+    low_stock: [],
+    products: [],
+    analytics: null
   })
 
-  const filteredProducts = allProducts.filter(p =>
-    !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.category.toLowerCase().includes(productSearch.toLowerCase()) || p.id.toLowerCase().includes(productSearch.toLowerCase())
+  // Tab State Handlers
+  const [orderSearch, setOrderSearch] = useState("")
+  const [orderStatus, setOrderStatus] = useState("tumu")
+  const [stockSearch, setStockSearch] = useState("")
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API}/dashboard/summary`).then(r => r.json()),
+      fetch(`${API}/orders?limit=50`).then(r => r.json()),
+      fetch(`${API}/products/low-stock`).then(r => r.json()),
+      fetch(`${API}/products`).then(r => r.json()),
+      fetch(`${API}/dashboard/analytics`).then(r => r.json()).catch(() => null)
+    ]).then(([s, o, l, p, a]) => {
+      setData({ summary: s, orders: o, low_stock: l, products: p, analytics: a })
+    }).catch(console.error)
+  }, [])
+
+  const filteredOrders = data.orders.filter(o => {
+    const mq = !orderSearch || o.id.toLowerCase().includes(orderSearch.toLowerCase()) || o.customer.toLowerCase().includes(orderSearch.toLowerCase())
+    const ms = orderStatus === "tumu" || o.status === orderStatus
+    return mq && ms
+  })
+
+  const filteredStock = data.products.filter(p =>
+    !stockSearch || p.name.toLowerCase().includes(stockSearch.toLowerCase()) || p.category.toLowerCase().includes(stockSearch.toLowerCase())
   )
 
-  const tabs = [
-    { id: "overview", label: "📊 Genel Bakış" },
-    { id: "orders", label: "📦 Siparişler" },
-    { id: "stock", label: "🏪 Stok" },
-    { id: "analytics", label: "📈 Analitik" },
-    { id: "notifications", label: `🔔 Bildirimler${unread > 0 ? ` (${unread})` : ""}` },
+  const TABS = [
+    { id: "genel", label: "Genel Bakış", icon: Icon.Layout },
+    { id: "siparisler", label: "Siparişler", icon: Icon.Package },
+    { id: "stok", label: "Stok", icon: Icon.Boxes },
+    { id: "analitik", label: "Analitik", icon: Icon.Chart },
+    { id: "bildirimler", label: "Bildirimler", icon: Icon.Bell, badge: unread },
   ]
 
+  const renderContent = () => {
+    if (activeTab === "genel") {
+      return (
+        <div className="space-y">
+          <div className="kpi-grid">
+            <div className="kpi-card">
+              <div className="kpi-icon" style={{ background: "rgba(59,130,246,0.1)", color: "var(--info)" }}><Icon.Package /></div>
+              <div className="kpi-label">Toplam Sipariş</div>
+              <div className="kpi-value">{data.summary.total_orders}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-icon" style={{ background: "rgba(245,158,11,0.1)", color: "var(--warning)" }}><Icon.Clock /></div>
+              <div className="kpi-label">Beklemede</div>
+              <div className="kpi-value">{data.summary.pending || 0}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-icon" style={{ background: "rgba(59,130,246,0.1)", color: "var(--info)" }}><Icon.Truck /></div>
+              <div className="kpi-label">Kargoda</div>
+              <div className="kpi-value">{data.summary.in_cargo || 0}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-icon" style={{ background: "rgba(22,163,74,0.1)", color: "var(--success)" }}><Icon.Check /></div>
+              <div className="kpi-label">Teslim Edildi</div>
+              <div className="kpi-value">{data.summary.delivered || 0}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-icon" style={{ background: "rgba(239,68,68,0.1)", color: "var(--destructive)" }}><Icon.Alert /></div>
+              <div className="kpi-label">Kritik Stok</div>
+              <div className="kpi-value">{data.low_stock.length}</div>
+            </div>
+          </div>
+
+          <div className="grid-2" style={{ gridTemplateColumns: '1fr 2fr' }}>
+            <div className="card" style={{ maxHeight: 500, display: 'flex', flexDirection: 'column' }}>
+              <div className="card-header">
+                <h2 style={{ color: 'var(--warning)' }}><Icon.Alert /> Kritik Stok ({data.low_stock.length})</h2>
+              </div>
+              <div className="card-body" style={{ overflowY: 'auto', padding: 0 }}>
+                {data.low_stock.slice(0,10).map((p,i) => {
+                  const pct = p.low_threshold ? Math.min(100, (p.stock_quantity / p.low_threshold)*100) : 0;
+                  return (
+                    <div key={i} style={{ padding: 16, borderBottom: '1px solid var(--border)' }}>
+                      <div className="flex-between mb-4">
+                        <span style={{ fontSize: 14, fontWeight: 500 }}>{p.name}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--destructive)' }}>{p.stock_quantity} kg</span>
+                      </div>
+                      <div className="bar-track">
+                        <div className="bar-fill bar-fill-warning" style={{ width: `${Math.max(2, pct)}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h2 style={{ color: 'var(--primary)' }}><Icon.Package /> Son Siparişler</h2>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Sipariş No</th><th>Müşteri</th><th>Durum</th><th className="text-right">Tutar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.orders.slice(0,7).map(o => (
+                      <tr key={o.id}>
+                        <td className="mono" style={{ color: 'var(--muted)' }}>{o.id}</td>
+                        <td style={{ fontWeight: 500 }}>{o.customer}</td>
+                        <td><StatusPill status={o.status} /></td>
+                        <td className="tabular text-right" style={{ fontWeight: 600 }}>₺{o.amount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (activeTab === "siparisler") {
+      return (
+        <div className="card">
+          <div className="card-header" style={{ gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 400 }}>
+              <div className="input-icon"><Icon.Search /></div>
+              <input className="input input-with-icon" style={{ width: '100%' }} placeholder="Sipariş no veya müşteri ara..." value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} />
+            </div>
+            <select className="select" value={orderStatus} onChange={e=>setOrderStatus(e.target.value)}>
+              <option value="tumu">Tüm Durumlar</option>
+              {Object.entries(STATUS_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <table className="table">
+            <thead>
+              <tr><th>Sipariş No</th><th>Müşteri</th><th>Durum</th><th className="text-right">Tutar</th></tr>
+            </thead>
+            <tbody>
+              {filteredOrders.map(o => (
+                <tr key={o.id}>
+                  <td className="mono" style={{ color: 'var(--muted)' }}>{o.id}</td>
+                  <td style={{ fontWeight: 500 }}>{o.customer}</td>
+                  <td><StatusPill status={o.status} /></td>
+                  <td className="tabular text-right" style={{ fontWeight: 600 }}>₺{o.amount}</td>
+                </tr>
+              ))}
+              {filteredOrders.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>Sipariş bulunamadı.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+
+    if (activeTab === "stok") {
+      return (
+        <div className="card">
+          <div className="card-header">
+            <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
+              <div className="input-icon"><Icon.Search /></div>
+              <input className="input input-with-icon" style={{ width: '100%' }} placeholder="Ürün ara..." value={stockSearch} onChange={e=>setStockSearch(e.target.value)} />
+            </div>
+          </div>
+          <table className="table">
+            <thead>
+              <tr><th>Ürün</th><th>Kategori</th><th className="text-right">Stok</th><th className="text-right">Fiyat</th></tr>
+            </thead>
+            <tbody>
+              {filteredStock.map(p => (
+                <tr key={p.code}>
+                  <td style={{ fontWeight: 500 }}>{p.name} <span className="mono" style={{ color: 'var(--muted)', fontSize: 11, marginLeft: 8 }}>{p.code}</span></td>
+                  <td>{p.category}</td>
+                  <td className="tabular text-right" style={{ color: p.stock_quantity <= p.low_threshold ? 'var(--destructive)' : 'var(--success)', fontWeight: 700 }}>{p.stock_quantity} kg</td>
+                  <td className="tabular text-right">₺{p.price}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+
+    if (activeTab === "analitik" && data.analytics) {
+      const a = data.analytics
+      const maxQty = Math.max(...a.top_products.map(p=>p.quantity))
+      const maxRev = Math.max(...a.top_revenue.map(p=>p.revenue))
+      const maxCat = Math.max(...a.category_data.map(c=>c.revenue))
+      
+      return (
+        <div className="space-y">
+          <div className="grid-3">
+            <div className="card" style={{ padding: 24, border: '2px solid rgba(22,163,74,0.2)' }}>
+              <div className="flex-between mb-4">
+                <span className="kpi-label">Toplam Ciro</span>
+                <div className="kpi-icon" style={{ background: "var(--primary-light)", color: "var(--primary)", margin: 0 }}><Icon.Wallet /></div>
+              </div>
+              <div className="kpi-value" style={{ color: "var(--primary)" }}>₺{a.total_revenue.toLocaleString('tr-TR')}</div>
+            </div>
+            <div className="card" style={{ padding: 24, border: '2px solid rgba(59,130,246,0.2)' }}>
+              <div className="flex-between mb-4">
+                <span className="kpi-label">Toplam Sipariş</span>
+                <div className="kpi-icon" style={{ background: "rgba(59,130,246,0.1)", color: "var(--info)", margin: 0 }}><Icon.Package /></div>
+              </div>
+              <div className="kpi-value" style={{ color: "var(--info)" }}>{a.total_orders}</div>
+            </div>
+            <div className="card" style={{ padding: 24, border: '2px solid rgba(245,158,11,0.2)' }}>
+              <div className="flex-between mb-4">
+                <span className="kpi-label">Ortalama Sipariş</span>
+                <div className="kpi-icon" style={{ background: "rgba(245,158,11,0.1)", color: "var(--warning)", margin: 0 }}><Icon.Chart /></div>
+              </div>
+              <div className="kpi-value" style={{ color: "var(--warning)" }}>₺{a.avg_order.toLocaleString('tr-TR')}</div>
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <ChartCard title="En Çok Satan Ürünler" icon={Icon.Trophy} accent="primary">
+              {a.top_products.map(p => <BarRow key={p.name} label={p.name} value={`${p.quantity} kg`} pct={(p.quantity/maxQty)*100} colorCls="bar-fill-primary" />)}
+            </ChartCard>
+            <ChartCard title="En Çok Gelir Getirenler" icon={Icon.Wallet} accent="success">
+              {a.top_revenue.map(p => <BarRow key={p.name} label={p.name} value={`₺${p.revenue.toLocaleString('tr-TR')}`} pct={(p.revenue/maxRev)*100} colorCls="bar-fill-success" />)}
+            </ChartCard>
+            <ChartCard title="Kategori Bazlı Gelir" icon={Icon.Folder} accent="warning">
+              {a.category_data.map(c => <BarRow key={c.category} label={c.category} value={`₺${c.revenue.toLocaleString('tr-TR')}`} pct={(c.revenue/maxCat)*100} colorCls="bar-fill-warning" />)}
+            </ChartCard>
+            <ChartCard title="Sipariş Durumları" icon={Icon.Pie} accent="info">
+              {Object.entries(a.status_counts).map(([k,v]) => <BarRow key={k} label={STATUS_LABELS[k]||k} value={v} pct={(v/a.total_orders)*100} colorCls="bar-fill-info" />)}
+            </ChartCard>
+          </div>
+        </div>
+      )
+    }
+
+    if (activeTab === "bildirimler") {
+      return (
+        <div className="card">
+          <div className="card-header">
+            <h2><Icon.Bell /> Bildirimler ({unread} yeni)</h2>
+            <button className="btn-secondary" onClick={markAllRead}>Tümünü Okundu İşaretle</button>
+          </div>
+          <div>
+            {notifications.map(n => (
+              <div key={n.id} className="notif-item" onClick={() => !n.is_read && markRead(n.id)}>
+                <div className="notif-dot" style={{ background: n.is_read ? 'transparent' : 'var(--primary)' }} />
+                <div style={{ flex: 1 }}>
+                  <div className="flex-between">
+                    <span className="notif-title">{n.title}</span>
+                    <span className="priority-badge" style={{
+                      background: n.priority === 'yuksek' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                      color: n.priority === 'yuksek' ? 'var(--destructive)' : 'var(--warning)'
+                    }}>{n.priority}</span>
+                  </div>
+                  <div className="notif-body">{n.message}</div>
+                  <div className="notif-time">{new Date(n.created_at).toLocaleString('tr-TR')}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    return null
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: "#0f1117", color: "#e1e4e8", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 28px", borderBottom: "1px solid #21262d", background: "#161b22" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#7c6af7,#3de6c0)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>K</div>
+    <div className="admin-layout">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="sidebar-logo">K</div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, background: "linear-gradient(135deg,#7c6af7,#3de6c0)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Koopilot</div>
-            <div style={{ fontSize: 11, color: "#8b949e" }}>Yönetici Paneli</div>
+            <div className="sidebar-title">Koopilot</div>
+            <div className="sidebar-subtitle">Yönetici Paneli</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {unread > 0 && <div style={{ background: "rgba(247,106,138,0.15)", border: "1px solid rgba(247,106,138,0.3)", borderRadius: 20, padding: "4px 12px", fontSize: 12, color: "#f76a8a", cursor: "pointer" }} onClick={() => setActiveTab("notifications")}>🔔 {unread} okunmamış</div>}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#7ee787", background: "rgba(126,231,135,0.1)", border: "1px solid rgba(126,231,135,0.2)", padding: "5px 12px", borderRadius: 20 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7ee787", display: "inline-block" }} /> Gemini AI Aktif
+        <nav className="sidebar-nav">
+          {TABS.map(t => (
+            <button key={t.id} className={`sidebar-link ${activeTab === t.id ? 'active' : ''}`} onClick={() => setActiveTab(t.id)}>
+              <span className="sidebar-link-text"><t.icon /> {t.label}</span>
+              {t.badge > 0 && <span className="sidebar-badge">{t.badge}</span>}
+            </button>
+          ))}
+        </nav>
+        <a href="/" className="sidebar-cta">
+          <div className="sidebar-cta-label"><Icon.Sparkles /> Gemini AI</div>
+          <div className="sidebar-cta-desc">Operasyon asistanınızla sohbet edin</div>
+          <div className="sidebar-cta-btn"><Icon.Msg /> Sohbeti Aç</div>
+        </a>
+      </aside>
+
+      {/* Main Content */}
+      <main className="admin-main">
+        <header className="page-header">
+          <div>
+            <h1>{TABS.find(t=>t.id===activeTab)?.label}</h1>
+            <p>Bugünkü operasyon durumunuza genel bakış</p>
           </div>
-          <button onClick={() => window.location.href = "/"} style={{ background: "#21262d", border: "1px solid #30363d", borderRadius: 8, padding: "6px 14px", color: "#c9d1d9", cursor: "pointer", fontSize: 12 }}>💬 Chat'e Dön</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="ai-badge"><span className="ai-badge-dot" /> AI Aktif</div>
+          </div>
+        </header>
+        <div className="admin-content">
+          {renderContent()}
         </div>
-      </div>
-
-      {/* Tab Bar */}
-      <div style={{ display: "flex", gap: 4, padding: "12px 28px 0", borderBottom: "1px solid #21262d", background: "#161b22" }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ padding: "8px 16px", borderRadius: "8px 8px 0 0", border: "1px solid " + (activeTab === t.id ? "#30363d" : "transparent"), borderBottom: activeTab === t.id ? "2px solid #7c6af7" : "none", background: activeTab === t.id ? "#0f1117" : "transparent", color: activeTab === t.id ? "#e1e4e8" : "#8b949e", cursor: "pointer", fontSize: 13, fontWeight: activeTab === t.id ? 600 : 400, transition: "all 0.15s" }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ padding: "24px 28px" }}>
-
-        {/* ── GENEL BAKIŞ ── */}
-        {activeTab === "overview" && (
-          <div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 16, marginBottom: 28 }}>
-              <SummaryCard icon="📦" label="Toplam Sipariş" value={summary?.total_orders ?? "…"} color="#7c6af7" />
-              <SummaryCard icon="🕐" label="Beklemede" value={summary?.pending ?? "…"} color="#f7a26a" />
-              <SummaryCard icon="🚚" label="Kargoda" value={summary?.in_cargo ?? "…"} color="#3de6c0" />
-              <SummaryCard icon="✅" label="Teslim Edildi" value={summary?.delivered ?? "…"} color="#7ee787" />
-              <SummaryCard icon="⚠️" label="Kritik Stok" value={summary?.critical_stock ?? "…"} color="#f7a26a" sub="ürün" />
-              <SummaryCard icon="🔔" label="Okunmamış Bildirim" value={summary?.unread_notifs ?? "…"} color="#f76a8a" />
-            </div>
-            {lowStock.length > 0 && (
-              <div style={{ ...cardBox, border: "1px solid rgba(247,162,106,0.3)", marginBottom: 24 }}>
-                <div style={{ fontWeight: 700, marginBottom: 16, color: "#f7a26a" }}>⚠️ Kritik Stok Uyarıları ({lowStock.length} ürün)</div>
-                {lowStock.map(p => <StockBar key={p.id} product={p} />)}
-              </div>
-            )}
-            <div style={{ ...cardBox, border: "1px solid #21262d", overflow: "hidden", padding: 0 }}>
-              <div style={{ padding: "14px 20px", borderBottom: "1px solid #21262d", fontWeight: 700, fontSize: 14 }}>📦 Son Siparişler</div>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr style={{ background: "#0d1117" }}>{["Sipariş No","Müşteri","Durum","Tutar","Kargo","İşlem"].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
-                <tbody>{orders.slice(0, 5).map(o => <OrderRow key={o.id} order={o} onStatusChange={handleStatusChange} />)}</tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ── SİPARİŞLER ── */}
-        {activeTab === "orders" && (
-          <div style={{ ...cardBox, border: "1px solid #21262d", overflow: "hidden", padding: 0 }}>
-            <div style={{ padding: "14px 20px", borderBottom: "1px solid #21262d", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>📦 Tüm Siparişler ({filteredOrders.length})</span>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input value={orderSearch} onChange={e => setOrderSearch(e.target.value)} placeholder="🔍 Sipariş no veya müşteri ara..." style={{ background: "#0d1117", border: "1px solid #30363d", borderRadius: 6, padding: "5px 10px", color: "#c9d1d9", fontSize: 12, width: 220, outline: "none" }} />
-                <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)} style={{ background: "#21262d", color: "#c9d1d9", border: "1px solid #30363d", borderRadius: 6, padding: "5px 8px", fontSize: 12, cursor: "pointer" }}>
-                  <option value="">Tüm durumlar</option>
-                  {Object.entries(STATUS_LABEL).map(([v, { label }]) => <option key={v} value={v}>{label}</option>)}
-                </select>
-                <button onClick={loadAll} style={{ background: "#21262d", border: "1px solid #30363d", borderRadius: 6, padding: "5px 12px", color: "#c9d1d9", cursor: "pointer", fontSize: 12 }}>🔄</button>
-              </div>
-            </div>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr style={{ background: "#0d1117" }}>{["Sipariş No","Müşteri","Durum","Tutar","Kargo","Durum Değiştir"].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
-              <tbody>
-                {filteredOrders.length === 0 ? (
-                  <tr><td colSpan={6} style={{ ...td, textAlign: "center", color: "#8b949e", padding: 24 }}>Sonuç bulunamadı</td></tr>
-                ) : filteredOrders.map(o => <OrderRow key={o.id} order={o} onStatusChange={handleStatusChange} />)}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* ── STOK ── */}
-        {activeTab === "stock" && (
-          <div>
-            <div style={{ marginBottom: 16 }}>
-              <input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="🔍 Ürün adı, kategori veya kod ara..." style={{ background: "#0d1117", border: "1px solid #30363d", borderRadius: 8, padding: "8px 14px", color: "#c9d1d9", fontSize: 13, width: 320, outline: "none" }} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <div style={{ ...cardBox, border: "1px solid rgba(247,162,106,0.3)" }}>
-                <div style={{ fontWeight: 700, marginBottom: 16, color: "#f7a26a" }}>⚠️ Kritik Seviyedekiler ({lowStock.length})</div>
-                {lowStock.length === 0 ? <div style={{ color: "#8b949e", fontSize: 13 }}>Kritik stok yok ✅</div> : lowStock.map(p => <StockBar key={p.id} product={p} />)}
-              </div>
-              <div style={cardBox}>
-                <div style={{ fontWeight: 700, marginBottom: 16 }}>📦 Tüm Ürünler ({filteredProducts.length})</div>
-                {filteredProducts.map(p => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #21262d23" }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: "#c9d1d9" }}>{p.name}</div>
-                      <div style={{ fontSize: 11, color: "#484f58" }}>{p.id} · {p.category}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 13, fontFamily: "monospace", color: p.is_critical ? "#f7a26a" : "#7ee787" }}>{p.stock_quantity} {p.unit}</div>
-                      <div style={{ fontSize: 11, color: "#484f58" }}>{p.unit_price} ₺</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── ANALİTİK ── */}
-        {activeTab === "analytics" && (
-          <div>
-            {!analytics ? (
-              <div style={{ color: "#8b949e", textAlign: "center", padding: 40 }}>Analitik veriler yükleniyor...</div>
-            ) : (
-              <>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 16, marginBottom: 28 }}>
-                  <SummaryCard icon="💰" label="Toplam Ciro" value={`${(analytics.total_revenue || 0).toLocaleString("tr-TR")} ₺`} color="#3de6c0" />
-                  <SummaryCard icon="📦" label="Toplam Sipariş" value={analytics.total_orders || 0} color="#7c6af7" />
-                  <SummaryCard icon="📊" label="Ortalama Sipariş" value={`${Math.round(analytics.avg_order || 0).toLocaleString("tr-TR")} ₺`} color="#58a6ff" />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
-                  <div style={cardBox}>
-                    <div style={{ fontWeight: 700, marginBottom: 16 }}>🏆 En Çok Satan Ürünler (Miktar)</div>
-                    {analytics.top_products?.length > 0 ? <SimpleBar items={analytics.top_products} labelKey="name" valueKey="quantity" color="#7c6af7" suffix=" adet" /> : <div style={{ color: "#8b949e", fontSize: 13 }}>Veri yok</div>}
-                  </div>
-                  <div style={cardBox}>
-                    <div style={{ fontWeight: 700, marginBottom: 16 }}>💰 En Çok Gelir Getiren Ürünler</div>
-                    {analytics.top_revenue?.length > 0 ? <SimpleBar items={analytics.top_revenue} labelKey="name" valueKey="revenue" color="#3de6c0" suffix=" ₺" /> : <div style={{ color: "#8b949e", fontSize: 13 }}>Veri yok</div>}
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <div style={cardBox}>
-                    <div style={{ fontWeight: 700, marginBottom: 16 }}>📂 Kategori Bazlı Gelir</div>
-                    {analytics.category_data?.length > 0 ? <SimpleBar items={analytics.category_data} labelKey="category" valueKey="revenue" color="#58a6ff" suffix=" ₺" /> : <div style={{ color: "#8b949e", fontSize: 13 }}>Veri yok</div>}
-                  </div>
-                  <div style={cardBox}>
-                    <div style={{ fontWeight: 700, marginBottom: 16 }}>📊 Sipariş Durum Dağılımı</div>
-                    {analytics.status_counts && Object.entries(analytics.status_counts).map(([status, count]) => {
-                      const s = STATUS_LABEL[status] || { label: status, color: "#8b949e" }
-                      const pct = analytics.total_orders > 0 ? ((count / analytics.total_orders) * 100).toFixed(0) : 0
-                      return (
-                        <div key={status} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #21262d33" }}>
-                          <span style={{ fontSize: 13, color: s.color }}>{s.label}</span>
-                          <span style={{ fontSize: 13, fontFamily: "monospace", color: "#c9d1d9" }}>{count} <span style={{ color: "#484f58", fontSize: 11 }}>(%{pct})</span></span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ── BİLDİRİMLER ── */}
-        {activeTab === "notifications" && (
-          <div style={{ ...cardBox, border: "1px solid #21262d", overflow: "hidden", maxWidth: 700, padding: 0 }}>
-            <div style={{ padding: "14px 20px", borderBottom: "1px solid #21262d", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>
-                🔔 Bildirimler {unread > 0 && <span style={{ marginLeft: 8, background: "#f76a8a22", color: "#f76a8a", borderRadius: 20, padding: "1px 8px", fontSize: 12 }}>{unread} okunmamış</span>}
-              </span>
-              {unread > 0 && <button onClick={markAllRead} style={{ background: "transparent", border: "1px solid #30363d", borderRadius: 6, padding: "4px 12px", color: "#8b949e", cursor: "pointer", fontSize: 12 }}>Tümünü Okundu İşaretle</button>}
-            </div>
-            {notifications.length === 0
-              ? <div style={{ padding: 24, color: "#8b949e", fontSize: 13, textAlign: "center" }}>Bildirim yok</div>
-              : notifications.map(n => <NotificationItem key={n.id} notif={n} onRead={markRead} />)
-            }
-          </div>
-        )}
-      </div>
+      </main>
     </div>
   )
 }
