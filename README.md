@@ -1,4 +1,4 @@
-# Koopilot AI - WhatsApp Integration
+# Koopilot AI
 
 Koopilot, küçük işletmeler ve kooperatifler için geliştirilmiş yapay zeka destekli bir operasyon asistanıdır.
 Yeni eklenen **WhatsApp AI Entegrasyonu** sayesinde kullanıcılar doğrudan WhatsApp üzerinden siparişlerini sorgulayabilir, kargo durumlarını takip edebilir ve yapay zeka ile doğal dilde iletişim kurabilir.
