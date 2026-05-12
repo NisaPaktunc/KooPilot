@@ -8,6 +8,7 @@ from services.ai_service import get_ai_response
 import uuid
 import json
 import asyncio
+from scheduler import start_scheduler, stop_scheduler
 
 Base.metadata.create_all(bind=engine)
 
@@ -20,6 +21,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    start_scheduler()
+
+@app.on_event("shutdown")
+def shutdown_event():
+    stop_scheduler()
 
 
 # ── WebSocket Bağlantı Yöneticisi (canlı bildirimler için) ────────────────────
@@ -54,6 +63,16 @@ manager = ConnectionManager()
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+
+class OrderItemRequest(BaseModel):
+    product_id: str
+    quantity: int
+
+class OrderCreateRequest(BaseModel):
+    customer_name: str
+    customer_phone: str
+    customer_email: Optional[str] = None
+    items: List[OrderItemRequest]
 
 
 class OrderStatusUpdate(BaseModel):
@@ -150,6 +169,91 @@ async def chat(request: ChatRequest):
         "tools_used":   tools_used,
         "tool_details": tool_details,
     }
+
+
+# ── Sipariş Oluşturma (POST /orders) ──────────────────────────────────────────
+
+@app.post("/orders")
+async def create_order(request: OrderCreateRequest, db: Session = Depends(get_db)):
+    # 1. Stok Kontrolü
+    for item in request.items:
+        product = db.query(Product).filter(Product.id == item.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Ürün bulunamadı: {item.product_id}")
+        if product.stock_quantity < item.quantity:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"{product.name} ürününde yeterli stok yok. Mevcut: {product.stock_quantity}"
+            )
+
+    # 2. Yeni Sipariş ID Üret (ORD-XXX)
+    last_order = db.query(Order).order_by(Order.id.desc()).first()
+    new_id_num = 1
+    if last_order and last_order.id.startswith("ORD-"):
+        try:
+            # ID'nin sayısal kısmını al (örn: ORD-005 -> 5)
+            num_part = last_order.id.split("-")[1]
+            new_id_num = int(num_part) + 1
+        except:
+            pass
+    new_order_id = f"ORD-{new_id_num:03d}"
+
+    # 3. Sipariş Kaydını Oluştur
+    db_order = Order(
+        id=new_order_id,
+        customer_name=request.customer_name,
+        customer_phone=request.customer_phone,
+        customer_email=request.customer_email,
+        status="beklemede",
+        total_amount=0.0
+    )
+    db.add(db_order)
+    
+    total_price = 0.0
+    for item in request.items:
+        product = db.query(Product).filter(Product.id == item.product_id).first()
+        
+        # OrderItem oluştur
+        order_item = OrderItem(
+            order_id=new_order_id,
+            product_id=item.product_id,
+            quantity=item.quantity,
+            unit_price=product.unit_price
+        )
+        db.add(order_item)
+        
+        # Stok Düş
+        product.stock_quantity -= item.quantity
+        total_price += (item.quantity * product.unit_price)
+
+        # Kritik Stok Kontrolü ve Bildirimi
+        if product.stock_quantity <= product.low_threshold:
+            notif = Notification(
+                type="stok_uyari",
+                title=f"🚨 Kritik Stok: {product.name}",
+                message=f"{product.name} stoğu sipariş sonrası {product.stock_quantity} {product.unit} seviyesine düştü!",
+                priority="yuksek"
+            )
+            db.add(notif)
+
+    db_order.total_amount = total_price
+    
+    try:
+        db.commit()
+        db.refresh(db_order)
+        
+        # 4. WebSocket ile Dashboard'a Bildir
+        await manager.broadcast({
+            "type": "new_order",
+            "order_id": new_order_id,
+            "customer": request.customer_name,
+            "amount": total_price
+        })
+        
+        return db_order
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Sipariş oluşturulurken hata: {str(e)}")
 
 
 # ── WhatsApp Webhook ──────────────────────────────────────────────────────────

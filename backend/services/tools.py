@@ -174,6 +174,31 @@ TOOL_DEFINITIONS = [
                 }
             }
         }
+    },
+    {
+        "name": "draft_supplier_order",
+        "description": (
+            "Kritik stok durumunda tedarikçiye sipariş e-posta taslağı oluşturur. "
+            "Stok kritik seviyeye düştüğünde ve yönetici tedarikçiye haber vermek istediğinde çağır."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "Sipariş verilecek ürünün kodu (örn: PRD-001)"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "description": "Sipariş verilecek miktar"
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Tedarikçiye özel not (opsiyonel)"
+                }
+            },
+            "required": ["product_id", "quantity"]
+        }
     }
 ]
 
@@ -237,6 +262,9 @@ def get_order_status(order_id: str = None, customer_name: str = None) -> str:
         query = db.query(Order)
         if order_id:
             order = query.filter(Order.id == order_id).first()
+            # Eğer bulunamadıysa ve başında ORD- yoksa ekleyip tekrar dene
+            if not order and not order_id.startswith("ORD-"):
+                order = query.filter(Order.id == f"ORD-{order_id}").first()
         elif customer_name:
             order = query.filter(
                 Order.customer_name.ilike(f"%{customer_name}%")
@@ -558,6 +586,52 @@ def get_stock_forecast(category: str = None) -> str:
         db.close()
 
 
+def draft_supplier_order(product_id: str, quantity: int, note: str = None) -> str:
+    from models import Supplier
+    db = SessionLocal()
+    try:
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return f"❌ Hata: {product_id} kodlu ürün bulunamadı."
+        
+        supplier = db.query(Supplier).filter(Supplier.id == product.supplier_id).first()
+        supplier_name = supplier.name if supplier else "Bilinmeyen Tedarikçi"
+        supplier_email = supplier.email if supplier else "tedarik@sirket.com"
+
+        # E-posta taslağı oluştur
+        subject = f"Tedarik Talebi: {product.name} ({product_id})"
+        body = (
+            f"Sayın {supplier_name},\n\n"
+            f"Aşağıdaki ürün için stoklarımız kritik seviyeye düşmüştür. "
+            f"Acil olarak tedarik edilmesini rica ederiz:\n\n"
+            f"- Ürün: {product.name}\n"
+            f"- Ürün Kodu: {product_id}\n"
+            f"- Talep Edilen Miktar: {quantity} {product.unit}\n"
+        )
+        if note:
+            body += f"- Not: {note}\n"
+        
+        body += "\nİyi çalışmalar dileriz.\nKoopilot Otomatik Tedarik Sistemi"
+
+        # Bildirim olarak kaydet
+        _save_notification(
+            title=f"📧 Taslak Hazır: {product.name}",
+            message=f"{supplier_name} için {quantity} {product.unit} sipariş taslağı oluşturuldu.",
+            priority="orta",
+            notif_type="tedarik_talebi",
+            db=db
+        )
+
+        return (
+            f"✅ {supplier_name} için e-posta taslağı hazırlandı:\n\n"
+            f"**Konu:** {subject}\n"
+            f"**Alıcı:** {supplier_email}\n\n"
+            f"**Mesaj:**\n{body}"
+        )
+    finally:
+        db.close()
+
+
 # ── Yardımcı: DB'ye bildirim kaydet (24 saat deduplikasyonlu) ─────────────────
 
 def _save_notification(title, message, priority, notif_type, db) -> int:
@@ -597,6 +671,7 @@ TOOL_HANDLERS = {
     "list_all_products":         list_all_products,
     "get_sales_analytics":       get_sales_analytics,
     "get_stock_forecast":        get_stock_forecast,
+    "draft_supplier_order":      draft_supplier_order,
 }
 
 
