@@ -1,60 +1,82 @@
-# Koopilot AI
+# Koopilot AI 🚀
 
-Koopilot, küçük işletmeler ve kooperatifler için geliştirilmiş yapay zeka destekli bir operasyon asistanıdır.
-Yeni eklenen **WhatsApp AI Entegrasyonu** sayesinde kullanıcılar doğrudan WhatsApp üzerinden siparişlerini sorgulayabilir, kargo durumlarını takip edebilir ve yapay zeka ile doğal dilde iletişim kurabilir.
+Koopilot, KOBİ'ler (Küçük ve Orta Büyüklükteki İşletmeler) ve kooperatifler için geliştirilmiş, tam kapsamlı ve **Yapay Zeka Destekli bir İşletme Yönetim Platformudur**. 
 
-## 🚀 Kurulum ve Çalıştırma
+Bu proje, geleneksel bir yönetim panelini (React) alıp, arka planda çalışan zeki bir yapay zeka asistanı (Gemini AI) ve WhatsApp Webhook (Twilio) entegrasyonu ile birleştirir. İşletme sahibi, stok durumunu, sipariş analizlerini ve finansal özetleri doğrudan WhatsApp üzerinden yapay zekaya sorabilir ve platform otonom olarak veritabanına bağlanıp işlemleri gerçekleştirir.
+
+---
+
+## ✨ Öne Çıkan Özellikler
+
+- **Gelişmiş Yönetim Paneli (React):** Ürün, Sipariş ve Tedarikçi yönetimi için dinamik, modern ve tam CRUD destekli arayüz.
+- **WhatsApp İşletme Asistanı:** Müşterilerin sipariş/kargo sorguladığı, yöneticilerin ise WhatsApp üzerinden satış analizi alabildiği otonom asistan.
+- **Yapay Zeka (Function Calling):** Gemini AI, doğal dildeki soruları anlar ve arka planda `check_stock`, `get_sales_analytics`, `get_stock_forecast` gibi Python fonksiyonlarını otonom olarak tetikler.
+- **Veri Analitiği ve Sağlık Skoru:** İşletmenin veritabanındaki (SQLite/SQLAlchemy) finansal durumu analiz edilerek anlık kar optimizasyon raporları oluşturulur.
+- **Tam Senkronizasyon:** WhatsApp üzerinden yapılan işlemler, anlık olarak Admin Dashboard'a yansır.
+
+---
+
+## 🛠️ Kurulum ve Çalıştırma
 
 ### 1. Ortam Değişkenleri (.env)
-Aşağıdaki değişkenleri `backend/.env` dosyanıza ekleyin:
+Projenin çalışması için backend klasörü içerisinde bir `.env` dosyası oluşturmalısınız. (Şifrelerinizi ve API anahtarlarınızı Github'a atmamak için `.gitignore` dosyasında `.env` gizlenmiştir).
+
+`backend/.env` dosyanızı şu formatta oluşturun:
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_gemini_api_key_here
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
+TWILIO_MANAGER_PHONE=whatsapp:+905550000000
 ```
 
-### 2. Twilio WhatsApp Sandbox Kurulumu
-Twilio üzerinden WhatsApp API'sini kullanmak için Sandbox ortamı gereklidir:
+### 2. Sunucuları Başlatma
+Projede iki ayrı sunucu bulunur (FastAPI ve Vite). İki farklı terminalde aşağıdaki komutları çalıştırın:
 
-1. [Twilio Console](https://console.twilio.com/) üzerinde bir hesap oluşturun.
-2. Messaging -> Try it out -> Send a WhatsApp message menüsüne gidin.
-3. Kendi telefonunuzdan Twilio Sandbox numarasına (örn: `+14155238886`) ekrandaki özel kodu (örn: `join whatever-word`) göndererek Sandbox'a katılın.
+**Backend (Terminal 1):**
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate   # Windows için
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
 
-### 3. Local Test ve ngrok Kullanımı
-WhatsApp entegrasyonunu kendi bilgisayarınızda test etmek için yerel sunucunuzu dışarı açmanız gerekir:
+**Frontend (Terminal 2):**
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-1. Backend sunucusunu başlatın:
-   ```bash
-   cd backend
-   uvicorn main:app --reload
-   ```
-2. Başka bir terminalde `ngrok` ile 8000 portunu dışa açın:
-   ```bash
-   ngrok http 8000
-   ```
-3. ngrok'un size verdiği URL'i (örn: `https://abcd-12-34.ngrok.io`) kopyalayın.
-4. Twilio Console > WhatsApp Sandbox ayarlarında, "WHEN A MESSAGE COMES IN" alanına şu Webhook URL'sini yapıştırın:
-   ```text
-   https://abcd-12-34.ngrok.io/webhook/whatsapp
-   ```
-5. Kaydedin ve WhatsApp'tan Sandbox numarasına mesaj atarak test edin!
+### 3. WhatsApp Entegrasyonu (Cloudflare Tüneli)
+WhatsApp botunu lokal makinenizde (Localhost) test edebilmek için Twilio'ya dışa açık bir URL (Webhook) sağlamanız gerekir. Bunun için en güvenli yol Cloudflare Tunnel kullanmaktır.
 
-### 4. Production Deployment (Railway)
-Proje Railway üzerinden tek tıkla yayınlanmaya (deploy) hazırdır. 
+**Terminal 3 (Tünel):**
+```bash
+npx untun tunnel http://localhost:8000
+```
+Bu komut size `https://rastgele-kelime.trycloudflare.com` gibi bir adres verecektir.
 
-1. Projeyi GitHub'a yükleyin.
-2. Railway'de yeni bir proje oluşturup GitHub deponuzu bağlayın.
-3. **Önemli:** Railway projesinin "Root Directory" ayarını `/backend` olarak belirleyin veya Railway'in `backend/Procfile` dosyasını gördüğünden emin olun.
-4. Railway ortam değişkenlerine (Variables) `.env` dosyanızdaki `GEMINI_API_KEY`, `TWILIO_ACCOUNT_SID` vb. değerleri girin.
-5. Railway'in ürettiği public URL'yi alın (örn: `https://koopilot.up.railway.app`).
-6. Twilio Sandbox veya Production WhatsApp Sender ayarlarında Webhook URL'yi bu adrese göre güncelleyin:
-   ```text
-   https://koopilot.up.railway.app/webhook/whatsapp
-   ```
+1. [Twilio Console](https://console.twilio.com/)'a gidin.
+2. **Messaging > Try it out > Send a WhatsApp message** sekmesine (Sandbox) girin.
+3. "WHEN A MESSAGE COMES IN" kısmına tünelin verdiği adresi yapıştırıp sonuna `/webhook/whatsapp` ekleyin.
+   *(Örn: `https://...trycloudflare.com/webhook/whatsapp`)*
+4. Kaydedin. WhatsApp üzerinden ekrandaki "join..." kodunu göndererek botu test etmeye başlayın!
 
-## 🛠️ Mimari Notlar
-- WhatsApp mesajları FastAPI `BackgroundTasks` kullanılarak asenkron olarak işlenir, böylece Twilio'nun timeout süresine takılmazsınız.
-- Yapay zeka (Gemini 2.5 Flash), kullanıcının telefon numarasını `session_id` olarak kullanarak konuşma geçmişini (memory) hatırlar.
-- AI, stok sorgusu (`check_stock`), sipariş (`get_order_status`) ve kargo durumu (`get_cargo_status`) tool'larını otomatik olarak kullanabilir.
+---
+
+## 🤖 AI Asistanın Sahip Olduğu Yetenekler (Tools)
+
+WhatsApp'tan aşağıdaki gibi sorular sorduğunuzda AI ilgili fonksiyonu çalıştırır:
+* **Stok Durumu (`check_stock`):** "Zeytinyağı stoklarımız ne durumda?"
+* **Satış Analitiği (`get_sales_analytics`):** "Bana bugünün satış analitiklerini ve en çok satan 5 ürünü listele."
+* **Stok Tahmini (`get_stock_forecast`):** "Hangi ürünlerin stoğu yakında bitecek? Tahmin alabilir miyim?"
+* **Kargo Sorgulama (`get_cargo_status`):** "TRK-4891 nolu kargom ne zaman gelir?"
+* **Akıllı Analiz (`run_smart_analysis`):** "İşletmenin genel sağlık skoru nasıl, bana eyleme dönüştürülebilir bir analiz yap."
+
+---
+
+## 🔒 Güvenlik Notu (Github'a Yüklerken)
+`.env` dosyanız projenin kök dizinindeki `.gitignore` dosyası sayesinde otomatik olarak gizlenmektedir. **Git push** işlemi yaptığınızda kişisel API anahtarlarınız (Twilio, Gemini) GitHub reposuna gönderilmez. Başka geliştiricilerin projeyi kurabilmesi için şifresiz hali `backend/.env.example` dosyasında bırakılmıştır.
