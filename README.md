@@ -16,6 +16,38 @@ Bu proje, geleneksel bir yönetim panelini (React) alıp, arka planda çalışan
 
 ---
 
+## 🏗️ Sistem Mimarisi
+
+KooPilot, ölçeklenebilir ve modern bir tam yığın (full-stack) mimarisi üzerine inşa edilmiştir. Sistem 4 ana katmandan oluşur:
+
+1. **İstemci (Frontend) Katmanı:**
+   - **React & Vite:** Yüksek performanslı ve modüler kullanıcı arayüzü (UI).
+   - Tam CRUD (Create, Read, Update, Delete) operasyonları ile ürün, stok, sipariş ve tedarikçi yönetimi.
+2. **Sunucu (Backend) Katmanı:**
+   - **FastAPI (Python):** Asenkron yapısı sayesinde yüksek hızlı RESTful API hizmeti sağlar.
+   - **BackgroundTasks:** Twilio Webhook zaman aşımlarını (timeout) önlemek için yapay zeka analizlerini arka planda işler.
+3. **Veri (Database) Katmanı:**
+   - **SQLAlchemy & SQLite:** Siparişler, ürünler, stok eşikleri ve konuşma geçmişleri ilişkisel (relational) bir veritabanı şemasında tutulur. Pydantic ile veri doğrulaması (validation) yapılır.
+4. **Yapay Zeka ve İletişim (AI & Comm) Katmanı:**
+   - **Google Gemini API:** `Function Calling` yeteneği sayesinde doğal dilden gelen istekleri analiz eder ve Python fonksiyonlarını tetikler (Otonom Agent).
+   - **Twilio API:** WhatsApp üzerinden gelen mesajları Webhook aracılığıyla sisteme iletir ve AI'ın ürettiği yanıtları kullanıcıya döndürür.
+
+**🔄 İşlem Akışı (Data Flow):**  
+`Kullanıcı (WhatsApp) ➡️ Twilio Webhook ➡️ FastAPI ➡️ Gemini AI (Niyet Analizi) ➡️ Function Call (DB Sorgusu) ➡️ Gemini (Yanıt Üretimi) ➡️ Twilio ➡️ Kullanıcı`
+
+---
+
+## 🧠 Yapay Zeka Yaklaşımı (AI Approach)
+
+KooPilot, basit bir Soru-Cevap (Q&A) botu yerine, proaktif ve aksiyon alabilen bir **Agentic AI (Ajan Yapay Zeka)** yaklaşımı kullanır:
+
+1. **Function Calling (Araç Kullanımı):** Yapay zeka modeli sadece metin üretmez; aynı zamanda kullanıcının niyetini anlar (Intent Recognition) ve bizim tanımladığımız Python fonksiyonlarını (`check_stock`, `get_cargo_status` vb.) tetikler.
+2. **Doğal Dil ile Veritabanı Etkileşimi:** Kullanıcının "Siparişim nerede?" gibi doğal dildeki soruları, AI tarafından otomatik olarak veri tabanı sorgularına dönüştürülür ve çekilen gerçek veriler anlamlı bir dille kullanıcıya sunulur.
+3. **Bağlam Yönetimi (Context & Memory):** Her kullanıcının telefon numarası benzersiz bir `session_id` olarak kabul edilir. AI, konuşma geçmişini hafızasında tutarak diyaloğun bağlamından kopmaz.
+4. **Güvenli Veri İşleme:** Veritabanının tamamı modele gönderilmez. Sadece kullanıcının sorduğu konuyla ilgili nokta atışı kayıtlar (örneğin yalnızca bir siparişin detayı) modele iletilir. Bu sayede hem güvenlik sağlanır hem de token tasarrufu yapılır.
+
+---
+
 ## 🛠️ Kurulum ve Çalıştırma
 
 ### 1. Ortam Değişkenleri (.env)
